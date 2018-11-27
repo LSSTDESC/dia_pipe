@@ -161,22 +161,26 @@ class AssociationDriverTask(BatchPoolTask):
         dataRefList = [getDataRef(cache.butler, dataId, self.config.coaddName + "Coadd_calexp") for
                        dataId in dataIdList]
 
+        idFactory = None        
+
         for dataRef in dataRefList:
+
             try:
                 calexp = dataRef.get(f"{self.config.coaddName}Coadd_calexp")
             except:
                 self.log.info('Cannot read data for %s' % (dataRef.dataId))
                 continue
+
+
             coaddWcs = calexp.getWcs()
             visitCatalog = calexp.getInfo().getCoaddInputs().ccds
             band = dataRef.dataId['filter']
             skyInfo = getSkyInfo(coaddName=self.config.coaddName, patchRef=dataRef)
 
-
             innerPatchBox = afwGeom.Box2D(skyInfo.patchInfo.getInnerBBox())
             self.log.info('Total number of images from filter %s to read %d' % (band, len(visitCatalog)))
 
-            for visitRec in visitCatalog[:]:
+            for visitRec in visitCatalog[:5]:
 
                 visit = visitRec.get('visit')
                 ccd = visitRec.get('ccd')
@@ -189,6 +193,11 @@ class AssociationDriverTask(BatchPoolTask):
                     self.log.info('Cannot read data for %d %d. skipping %s' % (visit, ccd, e))
                     continue
 
+                if idFactory is None:
+                    expBits = dataRef.get("deepMergedCoaddId_bits")
+                    expId = int(dataRef.get("deepMergedCoaddId"))
+                    idFactory = afwTable.IdFactory.makeSource(expId, 64 - expBits)
+                    self.associator.initialize(src.schema, idFactory)
 
                 mask = np.array([innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid()))) for a in src], dtype=bool)
 
@@ -217,10 +226,6 @@ class AssociationDriverTask(BatchPoolTask):
 
                 self.associator.addCatalog(src, band, visit, ccd, footprints)
 
-        # for now use the id factory for deepCoaddMergedId
-        expBits = dataRef.get("deepMergedCoaddId_bits")
-        expId = int(dataRef.get("deepMergedCoaddId"))
-        idFactory = afwTable.IdFactory.makeSource(expId, 64 - expBits)
 
         result = self.associator.finalize(idFactory)
         

@@ -47,6 +47,9 @@ class MultiMatchAssociationTask(pipeBase.Task):
 			s.setFootprint(foot)
 		self.multi_matches.add(src, {'visit':visit, 'ccd':ccd})
 
+	def initialize(self, schema, idFactory):
+		pass
+
 	def finalize(self, idFactory):
 		"""Finalize construction by creating afwTable SourceCatalog"""
 
