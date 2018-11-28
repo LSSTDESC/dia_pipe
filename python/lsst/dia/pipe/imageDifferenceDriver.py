@@ -4,7 +4,6 @@ from lsst.pex.config import Config, Field, ConfigurableField, ListField
 from lsst.ctrl.pool.parallel import BatchParallelTask, BatchTaskRunner
 from lsst.pipe.tasks.imageDifference import ImageDifferenceTask
 
-
 class ImageDifferenceDriverConfig(Config):
     ignoreCcdList = ListField(dtype=int, default=[],
                               doc="List of CCDs to ignore when processing")

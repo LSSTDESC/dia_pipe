@@ -5,6 +5,7 @@ import lsst.afw.table as afwTable
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDet
+
 from lsst.pex.config import Config, Field, ConfigurableField
 from lsst.pipe.base import ArgumentParser, TaskRunner
 from lsst.ctrl.pool.parallel import BatchPoolTask
@@ -21,7 +22,9 @@ __all__ = ("AssociationDriverConfig", "AssociationDriverTask")
 class AssociationDriverConfig(Config):
     coaddName = Field(dtype=str, default="deep", doc="Name of coadd")
     maxFootprintArea = Field(dtype=int, default=5000, doc="Maximum area of footprints")
-    defaultFootprintRadius = Field(dtype=int, default=40, doc="Use this radius to define the footprint if too large")
+    defaultFootprintRadius = Field(
+        dtype=int, default=40, 
+        doc="Use this radius to define the footprint if too large")
     associator = ConfigurableField(
         target=SimpleAssociationTask,
         doc="Task used to associate DiaSources with DiaObjects.",
@@ -29,12 +32,10 @@ class AssociationDriverConfig(Config):
 
 
 class AssociationDriverTaskRunner(TaskRunner):
-    """TaskRunner for running MultiBandTask
+    """TaskRunner for running AssociationDriver Task.
 
-    This is similar to the lsst.pipe.base.ButlerInitializedTaskRunner,
-    except that we have a list of data references instead of a single
-    data reference being passed to the Task.run, and we pass the results
-    of the '--reuse-outputs-from' command option to the Task constructor.
+    This is similar to the lsst.pipe.drivers.multiBandDriver runner
+    except with no reuse outputs option.
     """
 
     def __init__(self, TaskClass, parsedCmd, doReturnResults=False):
@@ -59,8 +60,6 @@ def unpickle(factory, args, kwargs):
 
 def _makeGetSchemaCatalogs(datasetSuffix):
     """Construct a getSchemaCatalogs instance method
-    These are identical for most of the classes here, so we'll consolidate
-    the code.
     datasetSuffix:  Suffix of dataset name, e.g., "src" for "deepCoadd_src"
     """
 
@@ -81,12 +80,8 @@ class AssociationDriverTask(BatchPoolTask):
 
     def __init__(self, butler=None, **kwargs):
         """!
-        @param[in] butler: the butler can be used to retrieve schema or passed to the refObjLoader constructor
-            in case it is needed.
-        @param[in] schema: the schema of the source detection catalog used as input.
-        @param[in] refObjLoader: an instance of LoadReferenceObjectsTasks that supplies an external reference
-            catalog.  May be None if the butler argument is provided or all steps requiring a reference
-            catalog are disabled.
+        @param[in] butler: the butler can be used to retrieve schema or passed to the refObjLoader 
+            constructor in case it is needed.
         """
         BatchPoolTask.__init__(self, **kwargs)
         self.butler = butler
@@ -157,7 +152,13 @@ class AssociationDriverTask(BatchPoolTask):
         pool.map(self.runAssociation, patches.values())
 
     def runAssociation(self, cache, dataIdList):
-        """! Run detection on a patch"""
+        """! Run association on a patch
+        
+        For all of the visits that overlap this patch in the band create a DIAObject
+        catalog.  Only the objects in the non-overlaping area of the tract and patch
+        are included.
+        """
+
         dataRefList = [getDataRef(cache.butler, dataId, self.config.coaddName + "Coadd_calexp") for
                        dataId in dataIdList]
 
@@ -180,13 +181,14 @@ class AssociationDriverTask(BatchPoolTask):
             innerPatchBox = afwGeom.Box2D(skyInfo.patchInfo.getInnerBBox())
             self.log.info('Total number of images from filter %s to read %d' % (band, len(visitCatalog)))
 
-            for visitRec in visitCatalog[:5]:
+            for visitRec in visitCatalog:
 
                 visit = visitRec.get('visit')
                 ccd = visitRec.get('ccd')
                 ccdId = visitRec.get('id')
                 try:
-                    exp = cache.butler.get(f"{self.config.coaddName}Diff_differenceExp", visit=visit, ccd=ccd)
+                    exp = cache.butler.get(f"{self.config.coaddName}Diff_differenceExp", visit=visit,
+                                           ccd=ccd)
                     src = cache.butler.get(f"{self.config.coaddName}Diff_diaSrc", visit=visit, ccd=ccd)
                     srcWcs = exp.getWcs()
                 except Exception as e:
@@ -199,7 +201,11 @@ class AssociationDriverTask(BatchPoolTask):
                     idFactory = afwTable.IdFactory.makeSource(expId, 64 - expBits)
                     self.associator.initialize(src.schema, idFactory)
 
-                mask = np.array([innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid()))) for a in src], dtype=bool)
+
+                mask = np.array([
+                    innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid()))) 
+                    for a in src
+                    ], dtype=bool)
 
                 src = src[mask]
                 if len(src) == 0:
@@ -236,7 +242,6 @@ class AssociationDriverTask(BatchPoolTask):
     def writeMetadata(self, dataRef):
         """We don't collect any metadata, so skip"""
         pass
-
 
     def _getConfigName(self):
         """!Return the name of the config dataset.  Forces config comparison from run-to-run

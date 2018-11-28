@@ -33,16 +33,25 @@ class MultiMatchAssociationTask(pipeBase.Task):
 	_DefaultName = "MultiMatch_association"
 
 	def __init__(self, **kwargs):
-
 		pipeBase.Task.__init__(self, **kwargs)
 		self.multi_matches = None
 
 
 	def addCatalog(self, src, filt, visit, ccd, footprints):
+		"""Add objects from a catalog to the existing MultiMatch
+
+		@param[in]  srcCat      An SourceCatalog of objects to be added.
+		@param[in]  filt        The filter of the catalog
+		@param[in]  visit       The visit number
+		@param[in]  ccd         The ccd number
+		@param[in]  footprints  A list of footprints that have been transformed to the
+							    WCS of the coadd patch.
+		"""
 
 		if self.multi_matches is None:
 			self.multi_matches = afwTable.MultiMatch(src.schema, {'visit':np.int32, 'ccd':np.int32}, 
-				                					 radius=afwGeom.Angle(self.config.tolerance/3600., geom.degrees))
+				                					 radius=afwGeom.Angle(self.config.tolerance/3600.,
+				                					 geom.degrees))
 		for s,foot in zip(src, footprints):
 			s.setFootprint(foot)
 		self.multi_matches.add(src, {'visit':visit, 'ccd':ccd})
@@ -51,7 +60,15 @@ class MultiMatchAssociationTask(pipeBase.Task):
 		pass
 
 	def finalize(self, idFactory):
-		"""Finalize construction by creating afwTable SourceCatalog"""
+		"""Finalize construction of the catalog.
+		
+		Create a SourceCatalog from the MultiMatch object and compute the corresponding
+		merged footprint.
+		@param[in]  idFactory   Used to generate ids.
+
+		@return    SourceCatalog of DIAObjects
+		"""
+		
 
 		if self.multi_matches is None:
 			return None

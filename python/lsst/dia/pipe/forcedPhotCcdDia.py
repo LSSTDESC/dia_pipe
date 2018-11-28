@@ -37,115 +37,13 @@ class DiaReferencesTask(CoaddSrcReferencesTask):
 	"""!
 	Dummy task so that the reference schema will match  
 
-	We do not get the reference tracts/patches here
+	We do not get the reference tracts/patches using this class
 	"""
 	ConfigClass = DiaReferencesConfig
 	datasetSuffix = "diaObject"
 
-	#def __init__(self, butler=None, schema=None, **kwargs):
-	#	"""!Initialize the task.
-	#	BaseReferencesTask and its subclasses take two keyword arguments beyond the usual Task arguments:
-	#	 - schema: the Schema of the reference catalog
-	#	 - butler: a butler that will allow the task to load its Schema from disk.
-	#	At least one of these arguments must be present; if both are, schema takes precedence.
-	#	"""
-	#	CoaddSrcReferencesTask.__init__(self, butler=butler, schema=schema, **kwargs)
-	#	print('Creating new referencetask')
-	#	self.catalog_cache = {}
-
-	# def fetchInBox(self, dataRef, bbox, wcs, pad=0):
-	# 	"""!
-	# 	Return reference sources that overlap a region defined by a pixel-coordinate bounding box
-	# 	and corresponding Wcs.
-	# 	@param[in] dataRef    ButlerDataRef; the implied data ID must contain the 'tract' key.
-	# 	@param[in] bbox       a geom.Box2I or Box2D that defines the region in pixel coordinates
-	# 	@param[in] wcs        afw.image.Wcs that maps the bbox to sky coordinates
-	# 	@param[in] pad        a buffer to grow the bounding box by after catalogs have been loaded, but
-	# 						  before filtering them to include just the given bounding box.
-	# 	@return an iterable of reference sources
-	# 	"""
-	# 	skyMap = dataRef.get(self.config.coaddName + "Coadd_skyMap", immediate=True)
-	# 	tract = skyMap[int(dataRef.dataId["tract"])]
-	# 	coordList = [wcs.pixelToSky(corner) for corner in geom.Box2D(bbox).getCorners()]
-	# 	self.log.info("Getting references in region with corners %s [degrees]" %
-	# 				  ", ".join("(%s)" % (coord.getPosition(geom.degrees),) for coord in coordList))
-	# 	patchList = tract.findPatchList(coordList)
-	# 	# After figuring out which patch catalogs to read from the bbox, pad out the bbox if desired
-	# 	# But don't add any new patches while padding
-	# 	if pad:
-	# 		bbox.grow(pad)
-	# 	catalog = self.fetchInPatches(dataRef, patchList)
-
-	# 	if catalog is not None:
-	# 		return self.subset(catalog, bbox, wcs)
-	# 	else:
-	# 		return None
-			
-
-	# def fetchInPatches(self, dataRef, patchList):
-	# 	"""!
-	# 	An implementation of BaseReferencesTask.fetchInPatches that loads 'coadd_' + datasetSuffix
-	# 	catalogs using the butler.
-		
-	# 	The given dataRef must include the tract in its dataId.
-	# 	"""
-	# 	dataset = "{}Coadd_{}".format(self.config.coaddName, self.datasetSuffix)
-	# 	tract = dataRef.dataId["tract"]
-	# 	butler = dataRef.butlerSubset.butler
-	# 	catalog = None
-
-	# 	#skyMap = dataRef.get(self.config.coaddName + "Coadd_skyMap", immediate=True)
-	# 	#refWcs = skyMap[int(dataRef.dataId["tract"])].getWcs()
-	# 	refWcs = self.getWcs(dataRef)
-	# 	for patch in patchList:
-	# 		#label = "%d_" % tract +  "%d,%d" % patch.getIndex()
-	# 		#if label in self.catalog_cache.keys():
-	# 		#	new_catalog = self.catalog_cache[label]
-	# 		#	print('Found cache')
-	# 		#else:
-	# 		dataId = {'tract': tract, 'patch': "%d,%d" % patch.getIndex()}
-	# 		if self.config.filter is not None:
-	# 			dataId['filter'] = self.config.filter
-	
-	# 		if not butler.datasetExists(dataset, dataId):
-	# 			if self.config.skipMissing:
-	# 				continue
-	# 			raise pipeBase.TaskError("Reference %s doesn't exist" % (dataId,))
-	# 		self.log.info("Getting references in %s" % (dataId,))
-				
-	# 		new_catalog = butler.get(dataset, dataId, immediate=True)
-	# 		#self.catalog_cache[label] = new_catalog
-
-	# 		bbox = geom.Box2D(patch.getInnerBBox())
-
-			
-	# 		if self.config.removePatchOverlaps:
-	# 			valid = np.array([bbox.contains(refWcs.skyToPixel(s.getCoord())) for s in new_catalog])
-	# 		else:
-	# 			valid = np.array([True]*len(new_catalog))
-			
-	# 		if catalog is None:
-	# 			catalog = new_catalog[valid]
-	# 		else:
-	# 			catalog.extend(new_catalog[valid])	
-
-	# 	return catalog
-	# def subset(self, sources, bbox, wcs):
-	# 	"""Filter on sources that are in the given bbox
-	# 	"""
-	# 	if sources is None:
-	# 		return sources
-	# 	boxD = geom.Box2D(bbox)
-
-	# 	skyCoordList = [source.getCoord() for source in sources]
-	# 	pixelPosList = wcs.skyToPixel(skyCoordList)
-	# 	mask = np.array([boxD.contains(pixel) for pixel in pixelPosList])
-	# 	return sources[mask]
-
-
 class ForcedDiaTransformedCentroidConfig(ForcedPluginConfig):
 	pass
-
 
 @register("base_DiaTransformedCentroid")
 class ForcedDiaTransformedCentroidPlugin(ForcedPlugin):
@@ -186,9 +84,11 @@ class ForcedPhotCcdDiaConfig(ForcedPhotCcdConfig):
 	def setDefaults(self):
 		ForcedPhotCcdTask.ConfigClass.setDefaults(self)
 		self.references.retarget(DiaReferencesTask)
-		self.measurement.copyColumns = {"id": "dia_object_id", "coord_ra": "coord_ra", "coord_dec": "coord_dec"}
-		self.measurement.plugins.names = ['base_GaussianFlux', 'base_SdssShape', 'base_DiaTransformedCentroid', 
-										  'base_PsfFlux', 'base_CircularApertureFlux', 'base_LocalBackground', 
+		self.measurement.copyColumns = {"id": "dia_object_id", "coord_ra": "coord_ra", 
+										"coord_dec": "coord_dec"}
+		self.measurement.plugins.names = ['base_GaussianFlux', 'base_SdssShape', 
+										  'base_DiaTransformedCentroid', 'base_PsfFlux',
+										  'base_CircularApertureFlux', 'base_LocalBackground', 
 										  'base_PixelFlags', 'base_SdssCentroid']
 		self.measurement.slots.centroid = 'base_DiaTransformedCentroid'
 		self.measurement.slots.shape = 'base_SdssShape'
@@ -201,14 +101,13 @@ class ForcedPhotCcdDiaConfig(ForcedPhotCcdConfig):
 
 class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 	"""!
-	A command-line driver for performing forced measurement on CCD images from DIA catalogs.
+	A command-line driver for performing forced measurement on CCD images from DIAObject catalogs.
 
 	This task is a subclass of ForcedPhotCcdTask, although it does not use most of the 
 	functionality defined there.  In this task we delegate the process of looking up
 	the reference catalog inside the run function.  We allow for the references to come
 	from multiple tracts and perform forced phometry on each tract and then combine them.
 	The refernces are all taken from the inner patch boundary
-	for the ForcedPhotCcdTask and extends them to use the DIA inputs.
 	"""
 
 	ConfigClass = ForcedPhotCcdDiaConfig
@@ -217,12 +116,12 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 	dataPrefix = ""
 
 	def writeOutput(self, dataRef, sources):
-		"""!Write forced source table
-		@param dataRef  Data reference from butler; the forced_src dataset (with self.dataPrefix included)
-						is all that will be modified.
+		"""!Write source table
+		@param dataRef  Data reference from butler
 		@param sources  SourceCatalog to save
 		"""
-		dataRef.put(sources, self.dataPrefix + "deepDiff_forced_dia_src", flags=afwTable.SOURCE_IO_NO_FOOTPRINTS)
+		dataRef.put(sources, self.dataPrefix + "deepDiff_forced_dia_src",
+					flags=afwTable.SOURCE_IO_NO_FOOTPRINTS)
 
 
 	def _getConfigName(self):
@@ -271,8 +170,6 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 			 	self.log.warn('Failed to get references for %s. skipping' % dataRef.dataId)
 			 	continue
 			refWcs = tract.getWcs()
-			#print (self.measurement.refSchema)
-			#print (self.measurement._mapper)
 
 			measCat = self.measurement.generateMeasCat(exposure, refCat, refWcs,
 			 										   idFactory=self.makeIdFactory(dataRef))
@@ -338,6 +235,14 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 	def fetchInPatches(self, butler, exposure, tract, patchList):
 		"""!
 		Get the reference catalogs from a given tract,patchlist
+
+		@param[in]  butler     A Butler used to get the reference catalogs
+		@param[in]  exposure   A deepDiff_exposure on which to run the measurements
+		@param[in]  tract      The tract
+		@param[in]  patchList  A list of patches that need to be checked
+
+
+		@return    Combined SourceCatalog from all the patches
 		"""
 		dataset = f"{self.config.coaddName}Coadd_diaObject"
 		catalog = None
@@ -359,14 +264,16 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 			expWcs = exposure.getWcs()
 
 			# only use objects that overlap inner patch bounding box and overlap exposure
-			validPatch = np.array([patchBox.contains(tractWcs.skyToPixel(s.getCoord())) for s in new_catalog])
+			validPatch = np.array([
+				patchBox.contains(tractWcs.skyToPixel(s.getCoord())) for s in new_catalog])
 
 			# There doesn't seem to be a inner bounding box so I have to use the sphgeom stuff
 			validTract = np.array([tractBox.contains(
 					sphgeom.UnitVector3d(sphgeom.LonLat.fromRadians(s.getRa().asRadians(),
 																	s.getDec().asRadians()))) 
 					for s in new_catalog])
-			validExposure = np.array([expBox.contains(expWcs.skyToPixel(s.getCoord())) for s in new_catalog])
+			validExposure = np.array([
+				expBox.contains(expWcs.skyToPixel(s.getCoord())) for s in new_catalog])
 			if catalog is None:
 				catalog = new_catalog[validPatch & validExposure & validTract]
 			else:

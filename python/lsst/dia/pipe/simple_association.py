@@ -1,6 +1,5 @@
 """Simple sequenctial association of DIASources into DIAObjects.
 """
-
 import numpy as np
 import healpy as hp
 
@@ -14,9 +13,6 @@ import lsst.geom as geom
 from .utils import query_disc, eq2xyz, toIndex
 
 __all__ = ["SimpleAssociationConfig", "SimpleAssociationTask"]
-
-
-
 
 class SimpleAssociationConfig(pexConfig.Config):
     """Configuration parameters for the SimpleAssociationTask
@@ -45,15 +41,22 @@ class SimpleAssociationTask(pipeBase.Task):
 	_DefaultName = "simple_association"
 
 	def __init__(self, **kwargs):
-
 		pipeBase.Task.__init__(self, **kwargs)
 		self.cat = None
 		
 	def dist(self, src_ra, src_dec, tol):
+		"""Compute the distance to all the objects within the tolerance of a point.
+
+		@param[in]  src_ra      RA in degrees
+		@param[in]  src_dec     Dec in degrees
+		@param[in]  tol   		Matching tolerance in arcseconds
+
+		@return    Pair of distances and matching indices to existing catalog
+		"""
 
 		ra = np.rad2deg(self.cat[self.keys['coord_ra']])
 		dec = np.rad2deg(self.cat[self.keys['coord_dec']])
-		match_indices = query_disc(self.config.nside, src_ra, src_dec, np.deg2rad(tol/3600))
+		match_indices = query_disc(self.config.nside, src_ra, src_dec, np.deg2rad(tol/3600.))
 		matches = np.in1d(self.indexes, match_indices)
 		
 		if np.sum(matches) < 1:
@@ -64,7 +67,14 @@ class SimpleAssociationTask(pipeBase.Task):
 		return dist, matches
 
 	def initialize(self, src_schema, idFactory):
+		"""Initialize the catalog
 
+		We need to know the schema before constructing the catalog, and thus we also need
+		an id factory.
+
+		@param[in]  src_schema  Schema from the diaSource
+		@param[in]  idFactory   Used to generate ids.
+		"""
 		self.schema = afwTable.SourceTable.makeMinimalSchema()
 
 		self.keys = {}
@@ -79,11 +89,15 @@ class SimpleAssociationTask(pipeBase.Task):
 		self.cat = afwTable.SourceCatalog(self.table)
 		# store the healpix index
 		self.indexes = []
-		# store the object ids
 		self.idLists = []
 		self.footprints = []
 
 	def addNew(self, src, footprint):
+		"""Add a new object to the existing catalog.
+
+		@param[in]  src         SourceRecofd of new object
+		@param[in]  footprint   The object footprint in the coadd WCS patch.
+		"""
 		rec = self.cat.addNew()
 		rec.set(self.keys['nobs'], 1)
 		for label,key in self.keys.items():
@@ -96,6 +110,12 @@ class SimpleAssociationTask(pipeBase.Task):
 		self.footprints.append(footprint)
 
 	def updateCat(self, match, src, footprint):
+		"""Update an object in the existing catalog.
+
+		@param[in]  match       Index of the current catalog that matches
+		@param[in]  src         SourceRecord of the matching object
+		@param[in]  footprint   The object footprint in the coadd WCS patch.
+		"""
 		self.idLists[match].append(src.get('id'))
 		match = int(match)
 		nobs = self.cat[match].get(self.keys['nobs'])
@@ -110,7 +130,17 @@ class SimpleAssociationTask(pipeBase.Task):
 				self.cat[match].set(key, ((nobs - 1)*val + new_val)/nobs)
 
 	def addCatalog(self, srcCat, filt, visit, ccd, footprints):
+		"""Add objects from a new catalog to the existing list
 
+		For objects that are not within the tolerance of any existing objects, new
+		sources will be created, otherwise the existing objects will be update.
+		@param[in]  srcCat      An SourceCatalog of objects to be added.
+		@param[in]  filt        The filter of the catalog
+		@param[in]  visit       The visit number
+		@param[in]  ccd         The ccd number
+		@param[in]  footprints  A list of footprints that have been transformed to the
+							    WCS of the coadd patch.
+		"""
 		for src,footprint in zip(srcCat,footprints):
 			dist, matches = self.dist(src['coord_ra'].asDegrees(), src['coord_dec'].asDegrees(), 
 									  2*self.config.tolerance)
@@ -127,7 +157,12 @@ class SimpleAssociationTask(pipeBase.Task):
 				self.addNew(src, footprint)
 
 	def finalize(self, idFactory):
-		"""Finalize construction by creating afwTable SourceCatalog"""
+		"""Finalize construction by setting the footprint
+		
+		@param[in]  idFactory   Used to generate ids.
+
+		@return    SourceCatalog of DIAObjects
+		"""
 
 		for rec,footprint in zip(self.cat, self.footprints):
 			rec.setFootprint(footprint)
