@@ -43,6 +43,7 @@ class SimpleAssociationTask(pipeBase.Task):
 	def __init__(self, **kwargs):
 		pipeBase.Task.__init__(self, **kwargs)
 		self.cat = None
+		self.footprints = []
 		
 	def dist(self, src_ra, src_dec, tol):
 		"""Compute the distance to all the objects within the tolerance of a point.
@@ -163,7 +164,9 @@ class SimpleAssociationTask(pipeBase.Task):
 
 		@return    SourceCatalog of DIAObjects
 		"""
-
+		if self.cat is None:
+			return None
+		
 		for rec,footprint in zip(self.cat, self.footprints):
 			rec.setFootprint(footprint)
 
