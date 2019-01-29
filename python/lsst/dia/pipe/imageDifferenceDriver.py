@@ -1,8 +1,8 @@
-from lsst.pipe.base import ArgumentParser, ButlerInitializedTaskRunner, ConfigDatasetType
-from lsst.pipe.tasks.processCcd import ProcessCcdTask
+from lsst.pipe.base import ArgumentParser, ButlerInitializedTaskRunner
 from lsst.pex.config import Config, Field, ConfigurableField, ListField
 from lsst.ctrl.pool.parallel import BatchParallelTask, BatchTaskRunner
 from lsst.pipe.tasks.imageDifference import ImageDifferenceTask
+
 
 class ImageDifferenceDriverConfig(Config):
     ignoreCcdList = ListField(dtype=int, default=[],
@@ -10,7 +10,6 @@ class ImageDifferenceDriverConfig(Config):
     ccdKey = Field(dtype=str, default="ccd",
                    doc="DataId key corresponding to a single sensor")
     imageDifference = ConfigurableField(target=ImageDifferenceTask, doc="CCD processing task")
-
 
 
 class ImageDifferenceDriverTaskRunner(BatchTaskRunner, ButlerInitializedTaskRunner):

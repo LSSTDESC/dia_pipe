@@ -1,4 +1,3 @@
-import argparse
 import numpy as np
 
 import lsst.afw.table as afwTable
@@ -9,21 +8,20 @@ import lsst.afw.detection as afwDet
 from lsst.pex.config import Config, Field, ConfigurableField
 from lsst.pipe.base import ArgumentParser, TaskRunner
 from lsst.ctrl.pool.parallel import BatchPoolTask
-from lsst.ctrl.pool.pool import Pool, abortOnError, NODE
-from lsst.meas.base.forcedPhotCoadd import ForcedPhotCoaddTask
+from lsst.ctrl.pool.pool import Pool, abortOnError
 from lsst.pipe.drivers.utils import getDataRef, TractDataIdContainer
-from lsst.pipe.tasks.coaddBase import CoaddDataIdContainer
 from lsst.pipe.tasks.coaddBase import getSkyInfo
 
 from .simple_association import SimpleAssociationTask
 
 __all__ = ("AssociationDriverConfig", "AssociationDriverTask")
 
+
 class AssociationDriverConfig(Config):
     coaddName = Field(dtype=str, default="deep", doc="Name of coadd")
     maxFootprintArea = Field(dtype=int, default=5000, doc="Maximum area of footprints")
     defaultFootprintRadius = Field(
-        dtype=int, default=40, 
+        dtype=int, default=40,
         doc="Use this radius to define the footprint if too large")
     associator = ConfigurableField(
         target=SimpleAssociationTask,
@@ -54,9 +52,11 @@ class AssociationDriverTaskRunner(TaskRunner):
             raise RuntimeError("parsedCmd or args must be specified")
         return self.TaskClass(config=self.config, log=self.log, butler=butler)
 
+
 def unpickle(factory, args, kwargs):
     """Unpickle something by calling a factory"""
     return factory(*args, **kwargs)
+
 
 def _makeGetSchemaCatalogs(datasetSuffix):
     """Construct a getSchemaCatalogs instance method
@@ -71,6 +71,7 @@ def _makeGetSchemaCatalogs(datasetSuffix):
         return {self.config.coaddName + "Coadd_" + datasetSuffix: src}
     return getSchemaCatalogs
 
+
 class AssociationDriverTask(BatchPoolTask):
     """Multi-node driver for multiband processing"""
     ConfigClass = AssociationDriverConfig
@@ -80,14 +81,13 @@ class AssociationDriverTask(BatchPoolTask):
 
     def __init__(self, butler=None, **kwargs):
         """!
-        @param[in] butler: the butler can be used to retrieve schema or passed to the refObjLoader 
+        @param[in] butler: the butler can be used to retrieve schema or passed to the refObjLoader
             constructor in case it is needed.
         """
         BatchPoolTask.__init__(self, **kwargs)
         self.butler = butler
         self.makeSubtask("associator")
         self.schema = afwTable.SourceTable.makeMinimalSchema()
-
 
     def __reduce__(self):
         """Pickler"""
@@ -99,7 +99,8 @@ class AssociationDriverTask(BatchPoolTask):
     def _makeArgumentParser(cls, *args, **kwargs):
         kwargs.pop("doBatch", False)
         parser = ArgumentParser(name=cls._DefaultName, *args, **kwargs)
-        parser.add_id_argument("--id", "deepCoadd", help="data ID, e.g. --id tract=12345 patch=1,2 filter=g^r^i",
+        parser.add_id_argument("--id", "deepCoadd",
+                               help="data ID, e.g. --id tract=12345 patch=1,2 filter=g^r^i",
                                ContainerClass=TractDataIdContainer)
         return parser
 
@@ -117,7 +118,7 @@ class AssociationDriverTask(BatchPoolTask):
         return time*numTargets/float(numCpus)
 
     @abortOnError
-    def run(self, patchRefList):
+    def runDataRef(self, patchRefList):
         """!Run association processing on coadds
 
         Only the master node runs this method.
@@ -153,7 +154,6 @@ class AssociationDriverTask(BatchPoolTask):
 
     def runAssociation(self, cache, dataIdList):
         """! Run association on a patch
-        
         For all of the visits that overlap this patch in the band create a DIAObject
         catalog.  Only the objects in the non-overlaping area of the tract and patch
         are included.
@@ -162,16 +162,15 @@ class AssociationDriverTask(BatchPoolTask):
         dataRefList = [getDataRef(cache.butler, dataId, self.config.coaddName + "Coadd_calexp") for
                        dataId in dataIdList]
 
-        idFactory = None        
+        idFactory = None
 
         for dataRef in dataRefList:
 
             try:
                 calexp = dataRef.get(f"{self.config.coaddName}Coadd_calexp")
-            except:
+            except Exception:
                 self.log.info('Cannot read data for %s' % (dataRef.dataId))
                 continue
-
 
             coaddWcs = calexp.getWcs()
             visitCatalog = calexp.getInfo().getCoaddInputs().ccds
@@ -185,7 +184,7 @@ class AssociationDriverTask(BatchPoolTask):
 
                 visit = visitRec.get('visit')
                 ccd = visitRec.get('ccd')
-                ccdId = visitRec.get('id')
+
                 try:
                     exp = cache.butler.get(f"{self.config.coaddName}Diff_differenceExp", visit=visit,
                                            ccd=ccd)
@@ -201,28 +200,28 @@ class AssociationDriverTask(BatchPoolTask):
                     idFactory = afwTable.IdFactory.makeSource(expId, 64 - expBits)
                     self.associator.initialize(src.schema, idFactory)
 
-
-                mask = np.array([
-                    innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid()))) 
-                    for a in src
-                    ], dtype=bool)
+                mask = np.array(
+                    [innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid())))
+                     for a in src],
+                    dtype=bool
+                )
 
                 src = src[mask]
                 if len(src) == 0:
                     continue
 
-                self.log.info('Reading difference image %d %d, %s with %d possible sources' % 
-                             (visit, ccd, dataRef.dataId['filter'],len(src)))
+                self.log.info('Reading difference image %d %d, %s with %d possible sources' %
+                              (visit, ccd, dataRef.dataId['filter'], len(src)))
 
                 footprints = []
                 region = calexp.getBBox(afwImage.PARENT)
-                for ii,rec in enumerate(src):
+                for ii, rec in enumerate(src):
                     # transformations on large footprints can take a long time
                     # We truncate the footprint since we will rarely be interested
                     # in such large footprints
                     if rec.getFootprint().getArea() > self.config.maxFootprintArea:
-                        spans = afwGeom.SpanSet.fromShape(self.config.defaultFootprintRadius, 
-                                                          afwGeom.Stencil.CIRCLE, 
+                        spans = afwGeom.SpanSet.fromShape(self.config.defaultFootprintRadius,
+                                                          afwGeom.Stencil.CIRCLE,
                                                           afwGeom.Point2I(rec.getCentroid()))
                         foot = afwDet.Footprint(spans)
                         foot.addPeak(int(rec.getX()), int(rec.getY()), 1)
@@ -232,9 +231,8 @@ class AssociationDriverTask(BatchPoolTask):
 
                 self.associator.addCatalog(src, band, visit, ccd, footprints)
 
-
         result = self.associator.finalize(idFactory)
-        
+
         if len(dataRefList) > 0 and result is not None:
             dataRefList[0].put(result, self.config.coaddName + 'Coadd_diaObject')
             self.log.info('Total objects found %d' % len(result))
@@ -247,9 +245,8 @@ class AssociationDriverTask(BatchPoolTask):
         """!Return the name of the config dataset.  Forces config comparison from run-to-run
         """
         return "associationDriver_config"
-    
+
     def _getMetadataName(self):
         """!Return the name of the metadata dataset.  Forced metadata to be saved
         """
         return "associationDriver_metadata"
-
