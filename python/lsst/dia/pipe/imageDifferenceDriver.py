@@ -38,7 +38,7 @@ class ImageDifferenceDriverTask(BatchParallelTask):
                                help="data ID, e.g. --id visit=12345 ccd=67")
         return parser
 
-    def run(self, sensorRef):
+    def runDataRef(self, sensorRef):
         """Process a single CCD, with scatter-gather-scatter using MPI.
         """
         if sensorRef.dataId[self.config.ccdKey] in self.ignoreCcds:
@@ -47,4 +47,4 @@ class ImageDifferenceDriverTask(BatchParallelTask):
             return None
 
         with self.logOperation("processing %s" % (sensorRef.dataId,)):
-            return self.imageDifference.run(sensorRef)
+            return self.imageDifference.runDataRef(sensorRef)

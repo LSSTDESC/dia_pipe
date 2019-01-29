@@ -142,7 +142,7 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 		return parser
 
 
-	def run(self, dataRef, psfCache=None):
+	def runDataRef(self, dataRef, psfCache=None):
 		"""!Measure a single exposure using forced detection for a reference catalog.
 		@param[in]  dataRef   An lsst.daf.persistence.ButlerDataRef. It is passed to the
 							  references subtask to obtain the reference WCS, the getExposure()
