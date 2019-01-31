@@ -69,7 +69,7 @@ def _makeGetSchemaCatalogs(datasetSuffix):
         src = afwTable.SourceCatalog(self.schema)
         if hasattr(self, "algMetadata"):
             src.getTable().setMetadata(self.algMetadata)
-        return {self.config.coaddName + "Coadd_" + datasetSuffix: src}
+        return {self.config.coaddName + "Diff_" + datasetSuffix: src}
     return getSchemaCatalogs
 
 
@@ -234,7 +234,7 @@ class AssociationDriverTask(BatchPoolTask):
         result = self.associator.finalize(idFactory)
 
         if len(dataRefList) > 0 and result is not None:
-            dataRefList[0].put(result, self.config.coaddName + 'Coadd_diaObject')
+            dataRefList[0].put(result, self.config.coaddName + 'Diff_diaObject')
             self.log.info('Total objects found %d' % len(result))
 
     def writeMetadata(self, dataRef):
