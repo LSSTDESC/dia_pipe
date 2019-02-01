@@ -280,6 +280,11 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
                     for s in new_catalog])
             validExposure = np.array([
                 expBox.contains(expWcs.skyToPixel(s.getCoord())) for s in new_catalog])
+
+            if validPatch.size == 0 or validExposure.size == 0 or validTract.size == 0:
+                self.log.debug("No valid sources %s for dataset %s" % (dataId, dataset))
+                continue
+
             if catalog is None:
                 catalog = new_catalog[validPatch & validExposure & validTract]
             else:
