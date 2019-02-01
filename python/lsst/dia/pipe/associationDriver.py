@@ -179,7 +179,8 @@ class AssociationDriverTask(BatchPoolTask):
             skyInfo = getSkyInfo(coaddName=self.config.coaddName, patchRef=dataRef)
 
             innerPatchBox = afwGeom.Box2D(skyInfo.patchInfo.getInnerBBox())
-            self.log.info('Total number of images from filter %s to read %d' % (band, len(visitCatalog)))
+            self.log.info('Total number of images from %s %s %s to read %d' %
+                          (dataRef.dataId['tract'], dataRef.dataId['patch'], band, len(visitCatalog)))
 
             for visitRec in visitCatalog:
 
