@@ -28,7 +28,7 @@ class SimpleAssociationConfig(pexConfig.Config):
     keepFields = pexConfig.ListField(
         dtype=str,
         doc='Keep these fields from the diaSrc catalogs.  Will be averaged over matches',
-        default=['base_PsfFlux_flux', 'base_PsfFlux_fluxSigma']
+        default=['base_PsfFlux_instFlux', 'base_PsfFlux_instFluxErr']
     )
 
 

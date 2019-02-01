@@ -23,7 +23,7 @@ class MultiMatchAssociationConfig(pexConfig.Config):
     fluxType = pexConfig.Field(
         dtype=str,
         doc='Keep track of the average flux of this type',
-        default='base_PsfFlux_flux',
+        default='base_PsfFlux_instFlux',
     )
 
 
