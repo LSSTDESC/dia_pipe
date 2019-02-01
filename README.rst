@@ -2,16 +2,20 @@
 dia_pipe
 ########
 
-.. Add a brief (few sentence) description of what this package provides.
 
 This package is intended to provide scripts to glue the different pieces of the
 LSST difference imaging code into a single pipeline that can be used for DESC
-data challenges.
+data challenges.  This code has been tested with the LSST stack version w.2018.39.  It
+is not compatible with previous releases and has not been tested with later ones.  The
+default configuration is designed to work with Data Challenge 1.2 data.
+
+This package requires additional dataset definitions in the obs_lsstCam mapper.  These
+are currently availble on the ``dc2/run1.2i_diff`` of obs_lsstCam.
 
 The baseline pipeline includes three steps:
-* Difference image creation at the visit level that produces DIASources and difference images
-* Association of the DIASources into DIAObjects
-* Running forced photometry at the positions of the DIAObjects on all visits
+ * Difference image creation at the visit level that produces DIASources and difference images
+ * Association of the DIASources into DIAObjects
+ * Running forced photometry at the positions of the DIAObjects on all visits
 
 It needs to define additional datasets for each camera, so we use a modified version of obs_lsstCam.
 The branch is
@@ -50,9 +54,9 @@ over the number of patches in the tract.  Therefore, it doesn't make sense to gi
 of patches.
 
 There are currently two association algorithms:
-* One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before
+ * One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before
 matching and is not meant to handle large number of objects.
-* A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource
+ * A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource
 catalog.  This should scale much better than the MultiMatch approach and is currently the defaul.
 It should be fairly simple to add additional association algorithms.
 
