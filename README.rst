@@ -54,8 +54,7 @@ over the number of patches in the tract.  Therefore, it doesn't make sense to gi
 of patches.
 
 There are currently two association algorithms:
- * One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before
-matching and is not meant to handle large number of objects.
+ * One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before matching and is not meant to handle large number of objects.
  * A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource
 catalog.  This should scale much better than the MultiMatch approach and is currently the defaul.
 It should be fairly simple to add additional association algorithms.
