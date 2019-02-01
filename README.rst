@@ -17,8 +17,6 @@ The baseline pipeline includes three steps:
  * Association of the DIASources into DIAObjects
  * Running forced photometry at the positions of the DIAObjects on all visits
 
-It needs to define additional datasets for each camera, so we use a modified version of obs_lsstCam.
-The branch is
 
 Creating difference images and catalogs
 ---------------------------------------
