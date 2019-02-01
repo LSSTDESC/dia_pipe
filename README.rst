@@ -47,7 +47,7 @@ the overlapping DIASources (within the inner boundary of the tract/patch so ther
 objects in different catalogs) and associate them into DIAObjects based soley on position.  The association 
 command is:
 
-    associationDriver.py [repo] --rerun [rerun] --id tract=9813 filter=HSC-I^HSC-G^HSC-R^HSC-Z^HSC-Y --cores [cores]
+    associationDriver.py [repo] --rerun [rerun] --id tract=[tract] filter=u^g^r^i^z^y --cores [cores]
 
 It will fetch DIASources only from the filters explicitly given.  This is also a batch task that will parallelize
 over the number of patches in the tract.  Therefore, it doesn't make sense to give more cores than the number
@@ -55,8 +55,8 @@ of patches.
 
 There are currently two association algorithms:
  * One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before matching and is not meant to handle large number of objects.
- * A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource
-catalog.  This should scale much better than the MultiMatch approach and is currently the defaul.
+ * A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource catalog.  This should scale much better than the MultiMatch approach and is currently the default.
+
 It should be fairly simple to add additional association algorithms.
 
 
@@ -67,7 +67,6 @@ We can now do forced photometry at the positions of the DIAObjects for all the v
     forcedPhotCcdDiaDriver.py [repo] --rerun [rerun] --id visit=[visit list] --cores [cores]
 
 This should produce an output for every visit.
-
 
 
 
