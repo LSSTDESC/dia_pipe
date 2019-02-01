@@ -27,7 +27,7 @@ class AssociationDriverConfig(Config):
         target=SimpleAssociationTask,
         doc="Task used to associate DiaSources with DiaObjects.",
     )
-    ccdName = Field(dtype=str, default='ccd', doc="Name of ccd to give to butler")
+    ccdKey = Field(dtype=str, default='detector', doc="Name of ccd to give to butler")
 
 
 class AssociationDriverTaskRunner(TaskRunner):
@@ -185,7 +185,7 @@ class AssociationDriverTask(BatchPoolTask):
 
                 visit = visitRec.get('visit')
                 ccd = visitRec.get('ccd')
-                dataId = {"visit": visit, self.config.ccdName: ccd}
+                dataId = {"visit": visit, self.config.ccdKey: ccd}
                 try:
                     exp = cache.butler.get(f"{self.config.coaddName}Diff_differenceExp", dataId)
                     src = cache.butler.get(f"{self.config.coaddName}Diff_diaSrc", dataId)
