@@ -7,7 +7,7 @@ from .forcedPhotCcdDia import ForcedPhotCcdDiaTask
 class ForcedPhotCcdDiaDriverConfig(Config):
     ignoreCcdList = ListField(dtype=int, default=[],
                               doc="List of CCDs to ignore when processing")
-    ccdKey = Field(dtype=str, default="ccd",
+    ccdKey = Field(dtype=str, default="detector",
                    doc="DataId key corresponding to a single sensor")
     forced = ConfigurableField(target=ForcedPhotCcdDiaTask, doc="CCD processing task")
 
@@ -46,4 +46,8 @@ class ForcedPhotCcdDiaDriverTask(BatchParallelTask):
             return None
 
         with self.logOperation("processing %s" % (dataRef.dataId,)):
-            return self.forced.run(dataRef)
+            return self.forced.runDataRef(dataRef)
+
+    def writeMetadata(self, dataRef):
+        """We don't collect any metadata, so skip"""
+        pass
