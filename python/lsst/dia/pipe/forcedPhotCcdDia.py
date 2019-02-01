@@ -36,6 +36,22 @@ class DiaReferencesTask(CoaddSrcReferencesTask):
     ConfigClass = DiaReferencesConfig
     datasetSuffix = "diaObject"
 
+    def __init__(self, butler=None, schema=None, **kwargs):
+        """! Initialize the task.
+        We cannot use the CoaddSrcReferencesTask init because of the hard coded "Coadd"
+
+        Additional keyword arguments (forwarded to BaseReferencesTask.__init__):
+         - schema: the schema of the detection catalogs used as input to this one
+         - butler: a butler used to read the input schema from disk, if schema is None
+        The task will set its own self.schema attribute to the schema of the output merged catalog.
+        """
+        BaseReferencesTask.__init__(self, butler=butler, schema=schema, **kwargs)
+        if schema is None:
+            assert butler is not None, "No butler nor schema provided"
+            schema = butler.get("{}Diff_{}_schema".format(self.config.coaddName, self.datasetSuffix),
+                                immediate=True).getSchema()
+        self.schema = schema
+
 
 class ForcedDiaTransformedCentroidConfig(ForcedPluginConfig):
     pass
@@ -90,7 +106,6 @@ class ForcedPhotCcdDiaConfig(ForcedPhotCcdConfig):
         self.measurement.slots.apFlux = 'base_CircularApertureFlux_3_0'
         self.measurement.slots.modelFlux = 'base_PsfFlux'
         self.measurement.slots.psfFlux = 'base_PsfFlux'
-        self.measurement.slots.instFlux = 'base_PsfFlux'
         self.measurement.slots.calibFlux = 'base_PsfFlux'
 
 
@@ -235,7 +250,7 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 
         @return    Combined SourceCatalog from all the patches
         """
-        dataset = f"{self.config.coaddName}Coadd_diaObject"
+        dataset = f"{self.config.coaddName}Diff_diaObject"
         catalog = None
 
         for patch in patchList:
