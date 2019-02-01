@@ -191,7 +191,7 @@ class AssociationDriverTask(BatchPoolTask):
                     src = cache.butler.get(f"{self.config.coaddName}Diff_diaSrc", dataId)
                     srcWcs = exp.getWcs()
                 except Exception as e:
-                    self.log.info('Cannot read data for %d %d. skipping %s' % (visit, ccd, e))
+                    self.log.debug('Cannot read data for %d %d. skipping %s' % (visit, ccd, e))
                     continue
 
                 if idFactory is None:
