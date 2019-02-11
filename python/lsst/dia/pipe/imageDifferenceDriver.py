@@ -46,4 +46,7 @@ class ImageDifferenceDriverTask(BatchParallelTask):
             return None
 
         with self.logOperation("processing %s" % (sensorRef.dataId,)):
-            return self.imageDifference.runDataRef(sensorRef)
+            try:
+                return self.imageDifference.runDataRef(sensorRef)
+            except Exception as e:
+                self.log.warn("Failed imageDifferenceDriver: %s", e)
