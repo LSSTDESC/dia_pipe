@@ -87,7 +87,8 @@ class AssociationDriverTask(BatchPoolTask):
         """
         BatchPoolTask.__init__(self, **kwargs)
         self.butler = butler
-        self.makeSubtask("associator")
+        self.src_schema = self.butler.get(f"{self.config.coaddName}Diff_diaSrc_schema").schema
+        self.makeSubtask("associator", src_schema=self.src_schema)
         self.schema = afwTable.SourceTable.makeMinimalSchema()
 
     def __reduce__(self):
@@ -194,12 +195,12 @@ class AssociationDriverTask(BatchPoolTask):
                 except Exception as e:
                     self.log.debug('Cannot read data for %d %d. skipping %s' % (visit, ccd, e))
                     continue
-
+                numCatalogs += 1
                 if idFactory is None:
                     expBits = dataRef.get("deepMergedCoaddId_bits")
                     expId = int(dataRef.get("deepMergedCoaddId"))
                     idFactory = afwTable.IdFactory.makeSource(expId, 64 - expBits)
-                    self.associator.initialize(src.schema, idFactory)
+                    self.associator.initialize(idFactory)
 
                 mask = np.array(
                     [innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid())))

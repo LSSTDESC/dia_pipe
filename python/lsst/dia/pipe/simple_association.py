@@ -39,10 +39,19 @@ class SimpleAssociationTask(pipeBase.Task):
     ConfigClass = SimpleAssociationConfig
     _DefaultName = "simple_association"
 
-    def __init__(self, **kwargs):
+    def __init__(self, src_schema=None, **kwargs):
         pipeBase.Task.__init__(self, **kwargs)
         self.cat = None
         self.footprints = []
+
+        self.schema = afwTable.SourceTable.makeMinimalSchema()
+        self.keys = {}
+        self.keys['nobs'] = self.schema.addField("nobs", type=np.int32, doc='Number of times observed')
+        self.keys['coord_ra'] = self.schema['coord_ra'].asKey()
+        self.keys['coord_dec'] = self.schema['coord_dec'].asKey()
+
+        for field in self.config.keepFields:
+            self.keys[field] = self.schema.addField(src_schema[field].asField())
 
     def dist(self, src_ra, src_dec, tol):
         """Compute the distance to all the objects within the tolerance of a point.
@@ -66,7 +75,7 @@ class SimpleAssociationTask(pipeBase.Task):
                          for ra1, dec1 in zip(ra[matches], dec[matches])])
         return dist, matches
 
-    def initialize(self, src_schema, idFactory):
+    def initialize(self, idFactory):
         """Initialize the catalog
 
         We need to know the schema before constructing the catalog, and thus we also need
@@ -75,15 +84,6 @@ class SimpleAssociationTask(pipeBase.Task):
         @param[in]  src_schema  Schema from the diaSource
         @param[in]  idFactory   Used to generate ids.
         """
-        self.schema = afwTable.SourceTable.makeMinimalSchema()
-
-        self.keys = {}
-        self.keys['nobs'] = self.schema.addField("nobs", type=np.int32, doc='Number of times observed')
-        self.keys['coord_ra'] = self.schema['coord_ra'].asKey()
-        self.keys['coord_dec'] = self.schema['coord_dec'].asKey()
-
-        for field in self.config.keepFields:
-            self.keys[field] = self.schema.addField(src_schema[field].asField())
 
         self.table = afwTable.SourceTable.make(self.schema, idFactory)
         self.cat = afwTable.SourceCatalog(self.table)

@@ -34,9 +34,15 @@ class MultiMatchAssociationTask(pipeBase.Task):
     ConfigClass = MultiMatchAssociationConfig
     _DefaultName = "MultiMatch_association"
 
-    def __init__(self, **kwargs):
+    def __init__(self, src_schema=None, **kwargs):
         pipeBase.Task.__init__(self, **kwargs)
         self.multi_matches = None
+
+        self.schema = afwTable.SourceTable.makeMinimalSchema()
+        self.nobsKey = self.schema.addField("nobs", type=np.int32, doc='Number of times observed')
+        self.fluxKey = self.schema.addField("flux", type=float, doc='Average flux')
+        self.raKey = self.schema['coord_ra'].asKey()
+        self.decKey = self.schema['coord_dec'].asKey()
 
     def addCatalog(self, src, filt, visit, ccd, footprints):
         """Add objects from a catalog to the existing MultiMatch
@@ -57,7 +63,7 @@ class MultiMatchAssociationTask(pipeBase.Task):
             s.setFootprint(foot)
         self.multi_matches.add(src, {'visit': visit, 'ccd': ccd})
 
-    def initialize(self, schema, idFactory):
+    def initialize(self, idFactory):
         pass
 
     def finalize(self, idFactory):
@@ -72,24 +78,19 @@ class MultiMatchAssociationTask(pipeBase.Task):
         if self.multi_matches is None:
             return None
 
-        schema = afwTable.SourceTable.makeMinimalSchema()
-        nobsKey = schema.addField("nobs", type=np.int32, doc='Number of times observed')
-        fluxKey = schema.addField("flux", type=float, doc='Average flux')
-        raKey = schema['coord_ra'].asKey()
-        decKey = schema['coord_dec'].asKey()
-        table = afwTable.SourceTable.make(schema, idFactory)
+        table = afwTable.SourceTable.make(self.schema, idFactory)
         cat = afwTable.SourceCatalog(table)
 
         results = self.multi_matches.finish(removeAmbiguous=False)
         allMatches = afwTable.GroupView.build(results)
 
-        psfMagKey = allMatches.schema.find(self.config.fluxType).key
-        raKey = allMatches.schema.find("coord_ra").key
-        decKey = allMatches.schema.find("coord_dec").key
+        match_psfMagKey = allMatches.schema.find(self.config.fluxType).key
+        match_raKey = allMatches.schema.find("coord_ra").key
+        match_decKey = allMatches.schema.find("coord_dec").key
 
-        ave_ra = allMatches.aggregate(np.mean, field=raKey)
-        ave_dec = allMatches.aggregate(np.mean, field=decKey)
-        ave_flux = allMatches.aggregate(np.mean, field=psfMagKey)
+        ave_ra = allMatches.aggregate(np.mean, field=match_raKey)
+        ave_dec = allMatches.aggregate(np.mean, field=match_decKey)
+        ave_flux = allMatches.aggregate(np.mean, field=match_psfMagKey)
 
         # Merge the footprints from the same object together
         object_ids = np.unique(results['object'])
@@ -107,8 +108,8 @@ class MultiMatchAssociationTask(pipeBase.Task):
         for i in range(len(ave_ra)):
             rec = cat.addNew()
             rec.setFootprint(footprints[i])
-            rec.set(raKey, ave_ra[i]*geom.radians)
-            rec.set(decKey, ave_dec[i]*geom.radians)
-            rec.set(fluxKey, ave_flux[i])
+            rec.set(self.raKey, ave_ra[i]*geom.radians)
+            rec.set(self.decKey, ave_dec[i]*geom.radians)
+            rec.set(self.fluxKey, ave_flux[i])
 
         return cat
