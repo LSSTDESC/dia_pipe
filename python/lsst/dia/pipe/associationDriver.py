@@ -211,6 +211,15 @@ class AssociationDriverTask(BatchPoolTask):
                 if len(src) == 0:
                     continue
 
+                # Found some objects that were not contained in their own footprint.
+                # Skip them for now
+                isGood = np.array(
+                    [rec.getFootprint().contains(afwGeom.Point2I(rec.getCentroid()))
+                     for rec in src]
+                )
+
+                src = src[isGood]
+
                 self.log.info('Reading difference image %d %d, %s with %d possible sources' %
                               (visit, ccd, dataRef.dataId['filter'], len(src)))
 
@@ -229,7 +238,6 @@ class AssociationDriverTask(BatchPoolTask):
                     else:
                         foot = rec.getFootprint()
                     footprints.append(foot.transform(srcWcs, coaddWcs, region))
-
                 self.associator.addCatalog(src, band, visit, ccd, footprints)
 
         result = self.associator.finalize(idFactory)
