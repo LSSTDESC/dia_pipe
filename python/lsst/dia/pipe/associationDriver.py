@@ -22,12 +22,17 @@ class AssociationDriverConfig(Config):
     maxFootprintArea = Field(dtype=int, default=5000, doc="Maximum area of footprints")
     defaultFootprintRadius = Field(
         dtype=int, default=40,
-        doc="Use this radius to define the footprint if too large")
+        doc="Use this radius to define the footprint if too large"
+    )
     associator = ConfigurableField(
         target=SimpleAssociationTask,
         doc="Task used to associate DiaSources with DiaObjects.",
     )
     ccdKey = Field(dtype=str, default='detector', doc="Name of ccd to give to butler")
+    maxLoadCatalogs = Field(
+        dtype=int, default=None,
+        doc="Use this radius to define the footprint if too large"
+    )
 
 
 class AssociationDriverTaskRunner(TaskRunner):
@@ -183,8 +188,11 @@ class AssociationDriverTask(BatchPoolTask):
             self.log.info('Total number of images from %s %s %s to read %d' %
                           (dataRef.dataId['tract'], dataRef.dataId['patch'], band, len(visitCatalog)))
 
+            numCatalogsLoaded = 0
             for visitRec in visitCatalog:
 
+                if numCatalogsLoaded >= self.config.maxLoadCatalogs and self.config.maxLoadCatalogs:
+                    continue
                 visit = visitRec.get('visit')
                 ccd = visitRec.get('ccd')
                 dataId = {"visit": visit, self.config.ccdKey: ccd}
@@ -195,7 +203,7 @@ class AssociationDriverTask(BatchPoolTask):
                 except Exception as e:
                     self.log.debug('Cannot read data for %d %d. skipping %s' % (visit, ccd, e))
                     continue
-                numCatalogs += 1
+                numCatalogsLoaded += 1
                 if idFactory is None:
                     expBits = dataRef.get("deepMergedCoaddId_bits")
                     expId = int(dataRef.get("deepMergedCoaddId"))
