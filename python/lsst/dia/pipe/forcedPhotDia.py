@@ -142,7 +142,7 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
     def _getMetadataName(self):
         """!Return the name of the metadata dataset.  Forced metadata to be saved
         """
-        return self.dataPrefix + "forcedPhotCcdDia_metadata"
+        return None
 
     @classmethod
     def _makeArgumentParser(cls):
