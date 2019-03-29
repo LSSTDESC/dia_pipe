@@ -380,10 +380,16 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
         self.attachFootprints(measCat, refCat, exposure, refWcs, dataRef)
 
         exposureId = self.getExposureId(dataRef)
+        self.measurement.run(measCat, exposure, refCat, refWcs, exposureId=exposureId)
 
-        result = self.run(measCat, exposure, refCat, refWcs, exposureId=exposureId)
+        if self.config.doApCorr:
+            self.applyApCorr.run(
+                catalog=measCat,
+                apCorrMap=exposure.getInfo().getApCorrMap()
+            )
+        self.catalogCalculation.run(measCat)
 
-        self.writeOutput(dataRef, result.measCat)
+        self.writeOutput(dataRef, measCat)
 
     def getReferences(self, dataRef, exposure):
         """Return an iterable of reference sources which overlap the exposure
