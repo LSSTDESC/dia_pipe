@@ -353,8 +353,8 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
     @classmethod
     def _makeArgumentParser(cls):
         parser = pipeBase.ArgumentParser(name=cls._DefaultName)
-        parser.add_id_argument("--id", "deepCoadd", help="data ID with raw Coadd keys"
-                               "e.g. --id visit=12345 Coadd")
+        parser.add_id_argument("--id", "deepCoadd", help="data ID with coadd keys"
+                               "e.g. --id tract=1234 patch=1,2 filter=r^i")
         parser.add_argument("--psfCache", type=int, default=100, help="Size of CoaddPsf cache")
         return parser
 
