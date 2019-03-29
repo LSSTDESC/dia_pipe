@@ -9,7 +9,7 @@ import lsst.sphgeom as sphgeom
 
 from lsst.meas.base.references import MultiBandReferencesConfig, BaseReferencesTask, CoaddSrcReferencesTask
 from lsst.meas.base.forcedPhotCcd import ForcedPhotCcdTask, ForcedPhotCcdConfig
-from lsst.meas.base.forcedPhotCoadd import ForcedPhotCoaddTask, ForcedPhotCoaddConfig
+from lsst.meas.base.forcedPhotCoadd import ForcedPhotCoaddTask, ForcedPhotCoaddConfig, ForcedPhotCoaddRunner
 from lsst.meas.base.forcedMeasurement import ForcedPluginConfig, ForcedPlugin
 from lsst.meas.base.pluginRegistry import register
 
@@ -330,7 +330,7 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
     """
 
     ConfigClass = ForcedPhotCoaddDiaConfig
-    RunnerClass = pipeBase.ButlerInitializedTaskRunner
+    RunnerClass = ForcedPhotCoaddRunner
     _DefaultName = "forcedPhotCoaddDia"
     dataPrefix = "deepCoadd_"
 
@@ -357,6 +357,7 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
         parser = pipeBase.ArgumentParser(name=cls._DefaultName)
         parser.add_id_argument("--id", "deepCoadd", help="data ID with raw Coadd keys"
                                "e.g. --id visit=12345 Coadd")
+        parser.add_argument("--psfCache", type=int, default=100, help="Size of CoaddPsf cache")
         return parser
 
     def runDataRef(self, dataRef, psfCache=None):
@@ -369,7 +370,7 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
         exposure = self.getExposure(dataRef)
 
         if psfCache is not None:
-            exposure.getPsf().setCacheSize(psfCache)
+            exposure.getPsf().setCacheCapacity(psfCache)
 
         refCat = self.getReferences(dataRef, exposure)
 
