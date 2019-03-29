@@ -428,9 +428,8 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
                 raise pipeBase.TaskError("Reference %s doesn't exist" % (dataId,))
             self.log.info("Getting references in %s" % (dataId,))
             catalog = butler.get(dataset, dataId, immediate=True)
-            sizes = np.array([cat.getFootprint().getBBox().getArea() for cat in catalog])
-            mask = sizes < 1000
-            for source in catalog[mask]:
+
+            for source in catalog:
                 yield source
 
     def attachFootprints(self, sources, refCat, exposure, refWcs, dataRef):
