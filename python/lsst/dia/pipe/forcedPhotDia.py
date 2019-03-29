@@ -306,11 +306,9 @@ class ForcedPhotCoaddDiaConfig(ForcedPhotCoaddConfig):
         self.references.retarget(DiaReferencesTask)
         self.measurement.copyColumns = {"id": "dia_object_id", "coord_ra": "coord_ra",
                                         "coord_dec": "coord_dec"}
-        self.measurement.plugins.names = ['base_SdssShape', 'base_DiaTransformedCentroid',
-                                          'base_PsfFlux', 'base_LocalBackground',
-                                          'base_PixelFlags']
+        self.measurement.plugins.names = ['base_DiaTransformedCentroid', 'base_PsfFlux']
         self.measurement.slots.centroid = 'base_DiaTransformedCentroid'
-        self.measurement.slots.shape = 'base_SdssShape'
+        self.measurement.slots.shape = None
         self.measurement.slots.apFlux = None
         self.measurement.slots.modelFlux = None
         self.measurement.slots.psfFlux = None
