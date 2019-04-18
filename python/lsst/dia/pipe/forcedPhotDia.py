@@ -131,7 +131,7 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
         @param dataRef  Data reference from butler
         @param sources  SourceCatalog to save
         """
-        dataRef.put(sources, self.dataPrefix + "deepDiff_forced_dia_src",
+        dataRef.put(sources, self.dataPrefix + "deepDiff_forced_diaSrc",
                     flags=afwTable.SOURCE_IO_NO_FOOTPRINTS)
 
     def _getConfigName(self):
@@ -337,7 +337,7 @@ class ForcedPhotCoaddDiaTask(ForcedPhotCoaddTask):
         @param dataRef  Data reference from butler
         @param sources  SourceCatalog to save
         """
-        dataRef.put(sources, "deepDiff_forced_dia_object",
+        dataRef.put(sources, "deepDiff_forced_diaObject",
                     flags=afwTable.SOURCE_IO_NO_FOOTPRINTS)
 
     def _getConfigName(self):
