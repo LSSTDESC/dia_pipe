@@ -1,7 +1,7 @@
 from lsst.pipe.base import ArgumentParser, ButlerInitializedTaskRunner
 from lsst.pex.config import Config, Field, ConfigurableField, ListField
 from lsst.ctrl.pool.parallel import BatchParallelTask, BatchTaskRunner
-from .forcedPhotCcdDia import ForcedPhotCcdDiaTask
+from .forcedPhotDia import ForcedPhotCcdDiaTask
 
 
 class ForcedPhotCcdDiaDriverConfig(Config):
@@ -24,7 +24,7 @@ class ForcedPhotCcdDiaDriverTask(BatchParallelTask):
     _DefaultName = "forcedPhotCcdDiaDriver"
     RunnerClass = ForcedPhotCcdDiaDriverTaskRunner
 
-    def __init__(self, butler=None, refObjLoader=None, *args, **kwargs):
+    def __init__(self, butler=None, *args, **kwargs):
         BatchParallelTask.__init__(self, *args, **kwargs)
         self.ignoreCcds = set(self.config.ignoreCcdList)
         self.makeSubtask("forced", butler=butler)
