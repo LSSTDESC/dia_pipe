@@ -34,7 +34,7 @@ You need to give the software a list of visits to run.  You can look these up in
 Given that I know one of the DDF tract patches is tract=4849 patch=5,5 I can find the visit list by doing::
 
 
-    sqlite /global/cscratch1/sd/rearmstr/example_diffim/Run1.2_data/rerun/calexp-v4/tracts_mapping.sqlite3
+    sqlite3 /global/cscratch1/sd/rearmstr/example_diffim/Run1.2_data/rerun/calexp-v4/tracts_mapping.sqlite3
 
     select distinct(visit) from overlaps where tract=4849 and patch='(5, 5)' order by visit;
 
@@ -47,7 +47,7 @@ To enable running on the 1.2p data I had to modify the mapper and registry files
 
 To run the difference imaging on one (or more) visits do::
 
-    imageDifferenceDriver.py /global/cscratch1/sd/rearmstr/example_diffim/Run1.2_data/rerun/coadd-v4 --output test_imdiff  --id     visit=431306  -C /global/cscratch1/sd/rearmstr/example_diffim/dia_pipe/config/ --batch-type=slurm --mpiexec='-bind-to socket'   --cores 100 --job test --time 500 --batch-options='-C knl -q regular'
+    imageDifferenceDriver.py /global/cscratch1/sd/rearmstr/example_diffim/Run1.2_data/rerun/coadd-v4 --output test_imdiff  --id     visit=431306  -C /global/cscratch1/sd/rearmstr/example_diffim/dia_pipe/config/imageDifferenceDriver.py --batch-type=slurm --mpiexec='-bind-to socket'   --cores 100 --job test --time 500 --batch-options='-C knl -q regular'
     
     the options are:
     - test: is the directory where the output will go
