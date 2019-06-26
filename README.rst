@@ -20,30 +20,30 @@ The baseline pipeline includes three steps:
 
 Creating difference images and catalogs
 ---------------------------------------
-It is assumed that you have a repo where the data has been processed all the way through the coadd 
+It is assumed that you have a repo where the data has been processed all the way through the coadd
 and multiBandDriver stages.
-Here is the command to create difference images for a set of visits:
+Here is the command to create difference images for a set of visits::
 
     imageDifferenceDriver.py [repo] --rerun [rerun]  --id visit=[visit list]  -C dia_pipe/config/ImageDifferenceDriver.py --cores [cores]
 
-This is a driver script that inherits from ctrl_pool so it can be submitted to a batch system or run 
+This is a driver script that inherits from ctrl_pool so it can be submitted to a batch system or run
 locally with all the standard commands.
 
-For each visit given, it will find the corresponding overlapping coadd tracts/patches.  It is currently 
-configured to use the science images or ``deepCoadd_calexp`` data products because that is what is available.  
+For each visit given, it will find the corresponding overlapping coadd tracts/patches.  It is currently
+configured to use the science images or ``deepCoadd_calexp`` data products because that is what is available.
 This can be changed once there are other coadds produced.  The coadd is then psf-matched to the visit
 and subtracted.  The default algorithm is Alard-Lupton, but the Zogy
-method is also availible.  More information on the algorithms and settings can be found ??.  
+method is also availible.  More information on the algorithms and settings can be found ??.
 
 The ouptut of this stage is a ``DIASource`` catalog and difference image for every CCD.
 
 
 Association of DIASources into DIAObjects
 -----------------------------------------
-The association is done separately for regions on the sky.  For each coadd patch we get all 
-the overlapping DIASources (within the inner boundary of the tract/patch so there are no duplicate 
-objects in different catalogs) and associate them into DIAObjects based soley on position.  The association 
-command is:
+The association is done separately for regions on the sky.  For each coadd patch we get all
+the overlapping DIASources (within the inner boundary of the tract/patch so there are no duplicate
+objects in different catalogs) and associate them into DIAObjects based soley on position.  The association
+command is::
 
     associationDriver.py [repo] --rerun [rerun] --id tract=[tract] filter=u^g^r^i^z^y --cores [cores]
 
@@ -57,22 +57,30 @@ There are currently two association algorithms:
 
 It should be fairly simple to add additional association algorithms.
 
+By default the list of visits is chosen by using those that were used to construct the coadd image.
+If you want to use a different set of visits you can can append the option::
+
+    --selectId visit=12345^12346^12347
+
 
 Forced Photometry
 ----------------------------------
-We can now do forced photometry at the positions of the DIAObjects for all the visits.
+We can now do forced photometry at the positions of the DIAObjects for all the visits::
 
     forcedPhotCcdDiaDriver.py [repo] --rerun [rerun] --id visit=[visit list] --cores [cores]
 
 This should produce an output for every visit.
 
 
+Setting time and PSF range when running coaddDriver
+----------------------------------------------------
+This package adds a selector to limit the input visits based on seeing and time that are fed into coaddDriver.py.  Here is an example config file::
 
+  from lsst.dia.pipe.selectImages import TimeBestSeeingWcsSelectImagesTask
+  config.select.retarget(TimeBestSeeingWcsSelectImagesTask)
+  config.select.minMJD = 59580.0
+  config.select.maxMJD = 60310.0
+  config.select.minPsfFwhm = 2.5
+  config.select.maxPsfFwhm = 3.5
 
-
-
-
-
-
-
-
+The FWHM values are specified in pixels.
