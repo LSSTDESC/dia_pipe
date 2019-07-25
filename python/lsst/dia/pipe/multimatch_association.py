@@ -1,6 +1,8 @@
 """MultiMatch sequenctial association of DIASources into DIAObjects.
 """
 import numpy as np
+from collections import defaultdict
+import pandas as pd
 
 import lsst.afw.table as afwTable
 import lsst.afw.geom as afwGeom
@@ -8,6 +10,8 @@ import lsst.afw.detection as afwDet
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 import lsst.geom as geom
+
+from .parquetTable import ParquetTable
 
 __all__ = ["MultiMatchAssociationConfig", "MultiMatchAssociationTask"]
 
@@ -94,21 +98,39 @@ class MultiMatchAssociationTask(pipeBase.Task):
         # Merge the footprints from the same object together
         object_ids = np.unique(results['object'])
         footprints = []
+        self.diaSrcIds = []
+        self.diaObjectIds = []
         for id in object_ids:
             mask = results['object'] == id
             footprint = None
+            src_ids = []
             for rec in results[mask]:
                 if footprint is None:
                     footprint = rec.getFootprint()
                 else:
                     footprint = afwDet.mergeFootprints(footprint, rec.getFootprint())
+                src_ids.append(rec.get('id'))
+            self.diaSrcIds.append(src_ids)
             footprints.append(footprint)
 
         for i in range(len(ave_ra)):
             rec = cat.addNew()
+            self.diaObjectIds.append(rec.get('id'))
             rec.setFootprint(footprints[i])
             rec.set(raKey, ave_ra[i]*geom.radians)
             rec.set(decKey, ave_dec[i]*geom.radians)
             rec.set(fluxKey, ave_flux[i])
 
         return cat
+
+    def getObjectIds(self):
+        """Get a list of id's corresponding to the objects in this catalog
+
+        @return    pandas DataFrame of matching diaObject ids to diaSrc ids
+        """
+        data = {}
+        data['diaObjectId'] = self.diaObjectIds
+        data['diaSrcIds'] = self.diaSrcIds
+        df = pd.DataFrame(data)
+        table = ParquetTable(dataFrame=df)
+        return table
