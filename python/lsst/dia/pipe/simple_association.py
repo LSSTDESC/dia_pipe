@@ -27,10 +27,16 @@ class SimpleAssociationConfig(pexConfig.Config):
         doc='Healpix nside value used for indexing',
         default=2**18,
     )
-    keepFields = pexConfig.ListField(
+    aveFields = pexConfig.ListField(
         dtype=str,
-        doc='Keep these fields from the diaSrc catalogs.  Will be averaged over matches',
-        default=['base_PsfFlux_instFlux', 'base_PsfFlux_instFluxErr']
+        doc='Average these fields from the diaSrc catalogs per band.  '
+            'They must have a corresponding Err quantity.',
+        default=['base_PsfFlux_instFlux']
+    )
+    filters = pexConfig.ListField(
+        dtype=str,
+        doc='Which filters will be averaged over',
+        default=['u', 'g', 'r', 'i', 'z', 'y']
     )
 
 
@@ -55,7 +61,6 @@ class SimpleAssociationTask(pipeBase.Task):
 
         @return    Pair of distances and matching indices to existing catalog
         """
-
         ra = np.rad2deg(self.cat[self.keys['coord_ra']])
         dec = np.rad2deg(self.cat[self.keys['coord_dec']])
         match_indices = query_disc(self.config.nside, src_ra, src_dec, np.deg2rad(tol/3600.))
@@ -80,58 +85,123 @@ class SimpleAssociationTask(pipeBase.Task):
         self.schema = afwTable.SourceTable.makeMinimalSchema()
 
         self.keys = {}
-        self.keys['nobs'] = self.schema.addField("nobs", type=np.int32, doc='Number of times observed')
+        self.keys['nobs'] = self.schema.addField("nobs", type=np.int32,
+                                                 doc='Number of times observed in all filters')
         self.keys['coord_ra'] = self.schema['coord_ra'].asKey()
         self.keys['coord_dec'] = self.schema['coord_dec'].asKey()
 
-        for field in self.config.keepFields:
-            self.keys[field] = self.schema.addField(src_schema[field].asField())
+        new_fields = {"Mean", "MeanErr", "Sigma", "Chi2", "Ndata"}
+
+        for filter in self.config.filters:
+            for field_name in self.config.aveFields:
+                for new_field in new_fields:
+                    field = src_schema[field_name].asField()
+                    name = f"{field.getName()}_{new_field}_{filter}"
+
+                    if new_field == "Ndata":
+                        field_type = np.int32
+                        doc = f'Number of times observed in filter {filter}'
+                    else:
+                        field_type = field.getTypeString()
+                        doc = f"{new_field} {field.getDoc()} for the {filter} filter"
+                    added_field = self.schema.addField(name, type=field_type, doc=doc)
+                    self.keys[name] = added_field
 
         self.table = afwTable.SourceTable.make(self.schema, idFactory)
         self.cat = afwTable.SourceCatalog(self.table)
+
         # store the healpix index
         self.indexes = []
         self.idLists = []
         self.footprints = []
 
-    def addNew(self, src, footprint):
+    def addNew(self, src, footprint, filter):
         """Add a new object to the existing catalog.
 
         @param[in]  src         SourceRecofd of new object
         @param[in]  footprint   The object footprint in the coadd WCS patch.
+        @param[in]  filter   The object filter
         """
         rec = self.cat.addNew()
         rec.set(self.keys['nobs'], 1)
-        for label, key in self.keys.items():
-            if label in src.schema:
-                rec.set(key, src.get(label))
+        rec.set(self.keys['coord_ra'], src.get('coord_ra'))
+        rec.set(self.keys['coord_dec'], src.get('coord_dec'))
+
+        for field in self.config.aveFields:
+            val = src.get(field)
+            if np.isfinite(val):
+                rec.set(self.keys[f"{field}_Mean_{filter}"], val)
+                rec.set(self.keys[f"{field}_Sigma_{filter}"], 0.)
+                rec.set(self.keys[f"{field}_MeanErr_{filter}"], 0.)
+                rec.set(self.keys[f"{field}_Chi2_{filter}"], 0.)
+                rec.set(self.keys[f"{field}_Ndata_{filter}"], 1)
+
         index = toIndex(self.config.nside, src.get('coord_ra').asDegrees(),
                         src.get('coord_dec').asDegrees())
         self.indexes.append(index)
         self.idLists.append([src.get('id')])
         self.footprints.append(footprint)
 
-    def updateCat(self, match, src, footprint):
+    def updateCat(self, match, src, footprint, filter):
         """Update an object in the existing catalog.
 
         @param[in]  match       Index of the current catalog that matches
         @param[in]  src         SourceRecord of the matching object
         @param[in]  footprint   The object footprint in the coadd WCS patch.
+        @param[in]  filter      The filter of the catalog
         """
         self.idLists[match].append(src.get('id'))
         match = int(match)
+
         nobs = self.cat[match].get(self.keys['nobs'])
         self.cat[match].set(self.keys['nobs'], nobs + 1)
 
+        # update coordinates as average over all bands
+        ra = self.cat[match].get(self.keys['coord_ra'])
+        dec = self.cat[match].get(self.keys['coord_dec'])
+
+        self.cat[match].set(self.keys['coord_ra'],
+                            (src.get('coord_ra') + (nobs - 1)*ra)/nobs)
+        self.cat[match].set(self.keys['coord_dec'],
+                            (src.get('coord_dec') + (nobs - 1)*dec)/nobs)
+
         self.footprints[match] = afwDet.mergeFootprints(self.footprints[match], footprint)
 
-        for label, key in self.keys.items():
-            if label in src.schema:
-                val = self.cat[match].get(label)
-                new_val = src.get(label)
-                self.cat[match].set(key, ((nobs - 1)*val + new_val)/nobs)
+        for field in self.config.aveFields:
+            new_val = src.get(field)
 
-    def addCatalog(self, srcCat, filt, visit, ccd, footprints):
+            if np.isfinite(new_val) is False:
+                continue
+
+            ndata = self.cat[match].get(f"{field}_Ndata_{filter}")
+            # If object was first detected in another filter then it can still
+            # have zero entries for other filters
+            if ndata == 0:
+                self.cat[match].set(self.keys[f"{field}_Mean_{filter}"], new_val)
+                self.cat[match].set(self.keys[f"{field}_Sigma_{filter}"], 0.)
+                self.cat[match].set(self.keys[f"{field}_MeanErr_{filter}"], 0.)
+                self.cat[match].set(self.keys[f"{field}_Chi2_{filter}"], 0.)
+                self.cat[match].set(self.keys[f"{field}_Ndata_{filter}"], 1)
+            else:
+                ndata += 1
+                mean_val = self.cat[match].get(f"{field}_Mean_{filter}")
+                sigma_val = self.cat[match].get(f"{field}_Sigma_{filter}")
+                chi2_val = self.cat[match].get(f"{field}_Chi2_{filter}")
+
+                new_val_error = src.get(field + "Err")
+
+                new_mean = (new_val + (ndata - 1)*mean_val)/ndata
+                new_sigma = np.sqrt(sigma_val +
+                                    (new_val - mean_val)*(new_val - new_mean))/ndata
+                new_chi2 = chi2_val + ((new_val - mean_val)/new_val_error)**2
+
+                self.cat[match].set(self.keys[f"{field}_Mean_{filter}"], new_mean)
+                self.cat[match].set(self.keys[f"{field}_Sigma_{filter}"], new_sigma)
+                self.cat[match].set(self.keys[f"{field}_MeanErr_{filter}"], new_sigma/np.sqrt(ndata))
+                self.cat[match].set(self.keys[f"{field}_Chi2_{filter}"], new_chi2)
+                self.cat[match].set(self.keys[f"{field}_Ndata_{filter}"], ndata)
+
+    def addCatalog(self, srcCat, filter, visit, ccd, footprints):
         """Add objects from a new catalog to the existing list
 
         For objects that are not within the tolerance of any existing objects, new
@@ -148,15 +218,15 @@ class SimpleAssociationTask(pipeBase.Task):
                                       2*self.config.tolerance)
 
             if dist is None:
-                self.addNew(src, footprint)
+                self.addNew(src, footprint, filter)
                 continue
 
             if np.min(dist) < np.deg2rad(self.config.tolerance/3600):
                 match_dist = np.argmin(dist)
                 match_index = np.where(matches)[0][match_dist]
-                self.updateCat(match_index, src, footprint)
+                self.updateCat(match_index, src, footprint, filter)
             else:
-                self.addNew(src, footprint)
+                self.addNew(src, footprint, filter)
 
     def finalize(self, idFactory):
         """Finalize construction by setting the footprint
