@@ -205,8 +205,6 @@ class SimpleAssociationTask(pipeBase.Task):
                 mean_val = self.cat[match].get(f"{field}_Mean_{filter}")
                 sigma_val = self.cat[match].get(f"{field}_Sigma_{filter}")
 
-                new_val_error = src.get(field + "Err")
-
                 new_mean = (new_val + (ndata - 1)*mean_val)/ndata
                 new_sigma = np.sqrt(sigma_val +
                                     (new_val - mean_val)*(new_val - new_mean))/ndata
