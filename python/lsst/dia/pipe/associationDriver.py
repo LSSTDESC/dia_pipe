@@ -190,7 +190,7 @@ class AssociationDriverTask(BatchPoolTask):
                     self.log.debug('Cannot read difference data for %d %d. skipping %s' % (visit, ccd, e))
                     continue
                 data = Struct(visit=visit, ccd=ccd, exp=exp, src=src,
-                              filter=dataRef.dataId['filter'])
+                              filter=dataRef.dataId['filter'], calib=exp.getPhotoCalib())
                 yield data
 
     def idListGenerator(self, cache, dataRefList, selectDataList=[]):
@@ -208,7 +208,7 @@ class AssociationDriverTask(BatchPoolTask):
                 continue
             data = Struct(visit=dataRef.dataId['visit'],
                           ccd=dataRef.dataId[self.config.ccdKey],
-                          filter=dataRef.dataId['filter'], exp=exp, src=src)
+                          filter=dataRef.dataId['filter'], exp=exp, src=src, calib=exp.getPhotoCalib())
             yield data
 
     def runAssociation(self, cache, dataIdList, selectDataList):
@@ -284,7 +284,7 @@ class AssociationDriverTask(BatchPoolTask):
                     foot = rec.getFootprint()
                 footprints.append(foot.transform(srcWcs, coaddWcs, region))
 
-            self.associator.addCatalog(src, diffIm.filter, diffIm.visit, diffIm.ccd, footprints)
+            self.associator.addCatalog(src, diffIm.filter, diffIm.visit, diffIm.ccd, diffIm.calib, footprints)
 
         result = self.associator.finalize(idFactory)
 
