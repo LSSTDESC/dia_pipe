@@ -7,11 +7,21 @@ import lsst.afw.table as afwTable
 import lsst.afw.detection as afwDet
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
+import lsst.afw.image as afwImage
 
 from .utils import query_disc, eq2xyz, toIndex
 from .parquetTable import ParquetTable
 
 __all__ = ["SimpleAssociationConfig", "SimpleAssociationTask"]
+
+
+def scaleFlux(flux, flux_err, calib, new_calib):
+    """Scale flux and error to new zeropoint
+    """
+    mag = calib.instFluxToMagnitude(flux, flux_err)
+    flux = new_calib.magnitudeToInstFlux(mag.value)
+    flux_err = flux*0.4*np.log(10)*mag.error
+    return flux, flux_err
 
 
 class SimpleAssociationConfig(pexConfig.Config):
@@ -29,7 +39,7 @@ class SimpleAssociationConfig(pexConfig.Config):
     )
     aveFields = pexConfig.ListField(
         dtype=str,
-        doc='Average these fields from the diaSrc catalogs per band.  '
+        doc='Average these flux fields from the diaSrc catalogs per band. '
             'They must have a corresponding Err quantity.',
         default=['base_PsfFlux_instFlux']
     )
@@ -37,6 +47,11 @@ class SimpleAssociationConfig(pexConfig.Config):
         dtype=str,
         doc='Which filters will be averaged over',
         default=['u', 'g', 'r', 'i', 'z', 'y']
+    )
+    commonZp = pexConfig.Field(
+        dtype=float,
+        doc='Put all fluxes on common zeropoint',
+        default=27
     )
 
 
@@ -51,6 +66,7 @@ class SimpleAssociationTask(pipeBase.Task):
         pipeBase.Task.__init__(self, **kwargs)
         self.cat = None
         self.footprints = []
+        self.calib = afwImage.makePhotoCalibFromCalibZeroPoint(10**(0.4*self.config.commonZp))
 
     def dist(self, src_ra, src_dec, tol):
         """Compute the distance to all the objects within the tolerance of a point.
@@ -115,7 +131,7 @@ class SimpleAssociationTask(pipeBase.Task):
         self.idLists = []
         self.footprints = []
 
-    def addNew(self, src, footprint, filter):
+    def addNew(self, src, footprint, filter, calib):
         """Add a new object to the existing catalog.
 
         @param[in]  src         SourceRecofd of new object
@@ -128,7 +144,9 @@ class SimpleAssociationTask(pipeBase.Task):
         rec.set(self.keys['coord_dec'], src.get('coord_dec'))
 
         for field in self.config.aveFields:
-            val = src.get(field)
+            flux = src.get(field)
+            flux_err = src.get(field+"Err")
+            val, val_err = scaleFlux(flux, flux_err, calib, self.calib)
             if np.isfinite(val):
                 rec.set(self.keys[f"{field}_Mean_{filter}"], val)
                 rec.set(self.keys[f"{field}_Sigma_{filter}"], 0.)
@@ -142,7 +160,7 @@ class SimpleAssociationTask(pipeBase.Task):
         self.idLists.append([src.get('id')])
         self.footprints.append(footprint)
 
-    def updateCat(self, match, src, footprint, filter):
+    def updateCat(self, match, src, footprint, filter, calib):
         """Update an object in the existing catalog.
 
         @param[in]  match       Index of the current catalog that matches
@@ -168,7 +186,9 @@ class SimpleAssociationTask(pipeBase.Task):
         self.footprints[match] = afwDet.mergeFootprints(self.footprints[match], footprint)
 
         for field in self.config.aveFields:
-            new_val = src.get(field)
+            flux = src.get(field)
+            flux_err = src.get(field+"Err")
+            new_val, new_val_err = scaleFlux(flux, flux_err, calib, self.calib)
 
             if np.isfinite(new_val) is False:
                 continue
@@ -201,7 +221,7 @@ class SimpleAssociationTask(pipeBase.Task):
                 self.cat[match].set(self.keys[f"{field}_Chi2_{filter}"], new_chi2)
                 self.cat[match].set(self.keys[f"{field}_Ndata_{filter}"], ndata)
 
-    def addCatalog(self, srcCat, filter, visit, ccd, footprints):
+    def addCatalog(self, srcCat, filter, visit, ccd, calib, footprints):
         """Add objects from a new catalog to the existing list
 
         For objects that are not within the tolerance of any existing objects, new
@@ -218,15 +238,15 @@ class SimpleAssociationTask(pipeBase.Task):
                                       2*self.config.tolerance)
 
             if dist is None:
-                self.addNew(src, footprint, filter)
+                self.addNew(src, footprint, filter, calib)
                 continue
 
             if np.min(dist) < np.deg2rad(self.config.tolerance/3600):
                 match_dist = np.argmin(dist)
                 match_index = np.where(matches)[0][match_dist]
-                self.updateCat(match_index, src, footprint, filter)
+                self.updateCat(match_index, src, footprint, filter, calib)
             else:
-                self.addNew(src, footprint, filter)
+                self.addNew(src, footprint, filter, calib)
 
     def finalize(self, idFactory):
         """Finalize construction by setting the footprint
