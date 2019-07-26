@@ -106,7 +106,7 @@ class SimpleAssociationTask(pipeBase.Task):
         self.keys['coord_ra'] = self.schema['coord_ra'].asKey()
         self.keys['coord_dec'] = self.schema['coord_dec'].asKey()
 
-        new_fields = {"Mean", "MeanErr", "Sigma", "Chi2", "Ndata"}
+        new_fields = {"Mean", "MeanErr", "Sigma", "Ndata"}
 
         for filter in self.config.filters:
             for field_name in self.config.aveFields:
@@ -151,7 +151,6 @@ class SimpleAssociationTask(pipeBase.Task):
                 rec.set(self.keys[f"{field}_Mean_{filter}"], val)
                 rec.set(self.keys[f"{field}_Sigma_{filter}"], 0.)
                 rec.set(self.keys[f"{field}_MeanErr_{filter}"], 0.)
-                rec.set(self.keys[f"{field}_Chi2_{filter}"], 0.)
                 rec.set(self.keys[f"{field}_Ndata_{filter}"], 1)
 
         index = toIndex(self.config.nside, src.get('coord_ra').asDegrees(),
@@ -200,25 +199,21 @@ class SimpleAssociationTask(pipeBase.Task):
                 self.cat[match].set(self.keys[f"{field}_Mean_{filter}"], new_val)
                 self.cat[match].set(self.keys[f"{field}_Sigma_{filter}"], 0.)
                 self.cat[match].set(self.keys[f"{field}_MeanErr_{filter}"], 0.)
-                self.cat[match].set(self.keys[f"{field}_Chi2_{filter}"], 0.)
                 self.cat[match].set(self.keys[f"{field}_Ndata_{filter}"], 1)
             else:
                 ndata += 1
                 mean_val = self.cat[match].get(f"{field}_Mean_{filter}")
                 sigma_val = self.cat[match].get(f"{field}_Sigma_{filter}")
-                chi2_val = self.cat[match].get(f"{field}_Chi2_{filter}")
 
                 new_val_error = src.get(field + "Err")
 
                 new_mean = (new_val + (ndata - 1)*mean_val)/ndata
                 new_sigma = np.sqrt(sigma_val +
                                     (new_val - mean_val)*(new_val - new_mean))/ndata
-                new_chi2 = chi2_val + ((new_val - mean_val)/new_val_error)**2
 
                 self.cat[match].set(self.keys[f"{field}_Mean_{filter}"], new_mean)
                 self.cat[match].set(self.keys[f"{field}_Sigma_{filter}"], new_sigma)
                 self.cat[match].set(self.keys[f"{field}_MeanErr_{filter}"], new_sigma/np.sqrt(ndata))
-                self.cat[match].set(self.keys[f"{field}_Chi2_{filter}"], new_chi2)
                 self.cat[match].set(self.keys[f"{field}_Ndata_{filter}"], ndata)
 
     def addCatalog(self, srcCat, filter, visit, ccd, calib, footprints):
