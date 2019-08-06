@@ -248,6 +248,9 @@ class AssociationDriverTask(BatchPoolTask):
                 self.associator.initialize(diffIm.src.schema, idFactory)
                 initializeSelector = True
 
+            if len(diffIm.src) == 0:
+                continue
+
             srcWcs = diffIm.exp.getWcs()
             isInside = np.array(
                 [innerPatchBox.contains(coaddWcs.skyToPixel(srcWcs.pixelToSky(a.getCentroid())))
@@ -257,8 +260,9 @@ class AssociationDriverTask(BatchPoolTask):
 
             isGood = np.array(
                 [rec.getFootprint().contains(afwGeom.Point2I(rec.getCentroid()))
-                 for rec in diffIm.src]
+                 for rec in diffIm.src],
             )
+
             mask = (isInside) & (isGood)
 
             src = diffIm.src[mask]
