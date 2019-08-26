@@ -292,6 +292,9 @@ class AssociationDriverTask(BatchPoolTask):
             dataRefList[0].put(result, self.config.coaddName + 'Diff_diaObject')
             self.log.info('Total objects found %d' % len(result))
 
+            idCatalog = self.associator.getObjectIds()
+            dataRefList[0].put(idCatalog, self.config.coaddName + 'Diff_diaObjectId')
+
     def selectExposures(self, patchRef, skyInfo=None, selectDataList=[]):
         """!
         @brief Select exposures to associate

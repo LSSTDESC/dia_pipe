@@ -1,6 +1,7 @@
 """Simple sequenctial association of DIASources into DIAObjects.
 """
 import numpy as np
+import pandas as pd
 
 import lsst.afw.table as afwTable
 import lsst.afw.detection as afwDet
@@ -8,6 +9,7 @@ import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
 
 from .utils import query_disc, eq2xyz, toIndex
+from .parquetTable import ParquetTable
 
 __all__ = ["SimpleAssociationConfig", "SimpleAssociationTask"]
 
@@ -170,3 +172,16 @@ class SimpleAssociationTask(pipeBase.Task):
             rec.setFootprint(footprint)
 
         return self.cat
+
+    def getObjectIds(self):
+        """Get a list of id's corresponding to the objects in this catalog
+
+        @return    pandas DataFrame of matching diaObject ids to diaSrc ids
+        """
+        data = {}
+        data['diaObjectId'] = self.cat['id']
+        data['diaSrcIds'] = self.idLists
+        df = pd.DataFrame(data)
+        table = ParquetTable(dataFrame=df)
+        return table
+
