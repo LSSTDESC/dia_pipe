@@ -16,8 +16,8 @@ for sub, filename in (("makeCoaddTempExp", "makeCoaddTempExp"),
 
 config.doBackgroundReference = False
 
-from lsst.pipe.tasks.selectImages import  BestSeeingSelectImagesTask
-config.select.retarget(BestSeeingSelectImagesTask)
+from lsst.pipe.tasks.selectImages import  BestSeeingWcsSelectImagesTask
+config.select.retarget(BestSeeingWcsSelectImagesTask)
 config.select.maxPsfFwhm=0.7/0.2
 
 from lsst.pipe.drivers.utils import NullSelectImagesTask
