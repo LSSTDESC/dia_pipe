@@ -3,6 +3,7 @@ import numpy as np
 import lsst.afw.table as afwTable
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
+import lsst.geom as lsstGeom
 import lsst.afw.detection as afwDet
 
 from lsst.pex.config import Config, Field, ConfigurableField
@@ -259,7 +260,7 @@ class AssociationDriverTask(BatchPoolTask):
             )
 
             isGood = np.array(
-                [rec.getFootprint().contains(afwGeom.Point2I(rec.getCentroid()))
+                [rec.getFootprint().contains(lsstGeom.Point2I(rec.getCentroid()))
                  for rec in diffIm.src],
             )
 
