@@ -3,7 +3,6 @@ import numpy as np
 import lsst.afw.table as afwTable
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-import lsst.afw.geom as afwGeom
 import lsst.geom as geom
 import lsst.sphgeom as sphgeom
 
@@ -220,7 +219,7 @@ class ForcedPhotCcdDiaTask(ForcedPhotCcdTask):
 
         wcs = exposure.getWcs()
         imagePixelCorners = exposure.getBBox().getCorners()
-        imageSkyCorners = [wcs.pixelToSky(afwGeom.Point2D(a)) for a in imagePixelCorners]
+        imageSkyCorners = [wcs.pixelToSky(geom.Point2D(a)) for a in imagePixelCorners]
 
         # get initial list of tracts and patches
         tractList = skyMap.findTractPatchList(imageSkyCorners)
