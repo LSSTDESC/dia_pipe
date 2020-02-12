@@ -3,6 +3,7 @@ import numpy as np
 import lsst.afw.table as afwTable
 import lsst.afw.image as afwImage
 import lsst.afw.geom as afwGeom
+import lsst.geom as geom
 import lsst.afw.detection as afwDet
 
 from lsst.pex.config import Config, Field, ConfigurableField
@@ -230,7 +231,7 @@ class AssociationDriverTask(BatchPoolTask):
             return
 
         coaddWcs = calexp.getWcs()
-        innerPatchBox = afwGeom.Box2D(skyInfo.patchInfo.getInnerBBox())
+        innerPatchBox = geom.Box2D(skyInfo.patchInfo.getInnerBBox())
 
         expBits = dataRef.get("deepMergedCoaddId_bits")
         expId = int(dataRef.get("deepMergedCoaddId"))
@@ -259,7 +260,7 @@ class AssociationDriverTask(BatchPoolTask):
             )
 
             isGood = np.array(
-                [rec.getFootprint().contains(afwGeom.Point2I(rec.getCentroid()))
+                [rec.getFootprint().contains(geom.Point2I(rec.getCentroid()))
                  for rec in diffIm.src],
             )
 
@@ -281,7 +282,7 @@ class AssociationDriverTask(BatchPoolTask):
                 if rec.getFootprint().getArea() > self.config.maxFootprintArea:
                     spans = afwGeom.SpanSet.fromShape(self.config.defaultFootprintRadius,
                                                       afwGeom.Stencil.CIRCLE,
-                                                      afwGeom.Point2I(rec.getCentroid()))
+                                                      geom.Point2I(rec.getCentroid()))
                     foot = afwDet.Footprint(spans)
                     foot.addPeak(int(rec.getX()), int(rec.getY()), 1)
                 else:
@@ -302,7 +303,7 @@ class AssociationDriverTask(BatchPoolTask):
     def selectExposures(self, patchRef, skyInfo=None, selectDataList=[]):
         """!
         @brief Select exposures to associate
-        Get the corners of the bbox supplied in skyInfo using @ref afwGeom.Box2D and convert the pixel
+        Get the corners of the bbox supplied in skyInfo using @ref geom.Box2D and convert the pixel
         positions of the bbox corners to sky coordinates using @ref skyInfo.wcs.pixelToSky. Use the
         @ref WcsSelectImagesTask_ "WcsSelectImagesTask" to select exposures that lie inside the patch
         indicated by the dataRef.
@@ -313,7 +314,7 @@ class AssociationDriverTask(BatchPoolTask):
         """
         if skyInfo is None:
             skyInfo = self.getSkyInfo(patchRef)
-        cornerPosList = afwGeom.Box2D(skyInfo.bbox).getCorners()
+        cornerPosList = geom.Box2D(skyInfo.bbox).getCorners()
         coordList = [skyInfo.wcs.pixelToSky(pos) for pos in cornerPosList]
         return self.select.runDataRef(patchRef, coordList, selectDataList=selectDataList).dataRefList
 

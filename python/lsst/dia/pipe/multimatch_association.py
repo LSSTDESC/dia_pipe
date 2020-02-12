@@ -5,7 +5,6 @@ from collections import defaultdict
 import pandas as pd
 
 import lsst.afw.table as afwTable
-import lsst.afw.geom as afwGeom
 import lsst.afw.detection as afwDet
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
@@ -79,7 +78,7 @@ class MultiMatchAssociationTask(pipeBase.Task):
             # The data id for multiMatch does not take strings so we need to convert filter to a string
             self.multi_matches = afwTable.MultiMatch(src.schema, {'visit': np.int32, 'ccd': np.int32,
                                                                   'filter': np.int32},
-                                                     radius=afwGeom.Angle(self.config.tolerance/3600.,
+                                                     radius=geom.Angle(self.config.tolerance/3600.,
                                                      geom.degrees))
         for s, foot in zip(src, footprints):
             s.setFootprint(foot)
