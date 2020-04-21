@@ -1,7 +1,7 @@
 from lsst.pipe.base import ArgumentParser, ButlerInitializedTaskRunner
 from lsst.pex.config import Config, Field, ConfigurableField, ListField
 from lsst.ctrl.pool.parallel import BatchParallelTask, BatchTaskRunner
-from .forcedPhotDia import ForcedPhotCcdDiaTask
+from .forcedPhotCcdDia import ForcedPhotCcdDiaTask
 
 
 class ForcedPhotCcdDiaDriverConfig(Config):
