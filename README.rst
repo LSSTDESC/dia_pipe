@@ -84,3 +84,11 @@ This package adds a selector to limit the input visits based on seeing and time 
   config.select.maxPsfFwhm = 3.5
 
 The FWHM values are specified in pixels.
+
+Using multiple tracts for templates when doing difference imaging
+-------------------------------------------------------------------
+By default the LSST difference imaging software will only get the template from a single tract.  If the overlap area between tracts is more than the size of a CCD then this is not an issue, however if the overlap area is small then some CCDs will not have complete template coverage.  'dia_pipe' includes an alternate template routine that will get all overlapping tracts for a given CCD.  In the region of overlap the template (and PSF) will be an average of the overlaping tracts.  To enable this algorithm with imageDifferenceDriver::
+
+    from lsst.dia.pipe.getMultiTractTemplate import GetCoaddAsMultiTractTemplateTask
+    config.imageDifference.getTemplate.retarget(GetCoaddAsMultiTractTemplateTask)
+
