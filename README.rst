@@ -52,8 +52,10 @@ over the number of patches in the tract.  Therefore, it doesn't make sense to gi
 of patches.
 
 There are currently two association algorithms:
- * One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before matching and is not meant to handle large number of objects.
- * A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource catalog.  This should scale much better than the MultiMatch approach and is currently the default.
+ * One based on the MultiMatch algorithm in the LSST stack.  This requires loading all objects into memory before matching and is not 
+   meant to handle large number of objects.
+ * A simple matching algorithm that keeps a running list of DIAObjects and adds to the list for each new DIASource catalog.  
+   This should scale much better than the MultiMatch approach and is currently the default.
 
 It should be fairly simple to add additional association algorithms.
 
@@ -63,13 +65,51 @@ If you want to use a different set of visits you can can append the option::
     --selectId visit=12345^12346^12347
 
 
-Forced Photometry
+Forced Photometry of DIAObjects
 ----------------------------------
-We can now do forced photometry at the positions of the DIAObjects for all the visits::
+We can do forced photometry at the positions of the DIAObjects for all the visits::
 
     forcedPhotCcdDiaDriver.py [repo] --rerun [rerun] --id visit=[visit list] --cores [cores]
 
 This should produce an output for every visit.
+
+
+Other Forced Photometry Scripts
+--------------------------------
+There are three other forced photometry algorithms.  The first two will produce an output for each visit.
+
+1. Forced photometry on difference images at the position of the template catalogs.  This will get all template objects 
+   from the band the exposure was observed in and within the sky bounding box and perform forced photometry.  Objects that 
+   have the position of the parent object outside of the bounding box will be removed from the catalog.  This can be called by::
+
+    forcedPhotCcdTemplateDia [repo] --rerun [rerun] --id visit=[visit list]
+
+   you can also run this via the ``forcedPhotCcdDiaDriver.py`` script by setting a configuration file::
+
+    from lsst.dia.pipe.forcedPhotCcdTemplateDia import ForcedPhotCcdTemplateDiaTask
+    config.forced.retarget(ForcedPhotCcdTemplateDiaTask)
+
+
+2. Forced photometry on the template images at the position of the diaSrc catalog.  This will take 
+   the diaSrc catalog and find all template images that contain these objects and perform forced photometry.  
+   A ``detect_isPrimary`` flag is added to select unique objects because there will be overlap between different tracts/patches.   This can be called by::
+
+    forcedPhotCoaddDiaSrc [repo] --rerun [rerun] --id visit=[visit list]
+
+   this can also be run via the ``forcedPhotCcdDiaDriver.py`` script by setting a configuration file::
+
+    from lsst.dia.pipe.forcedPhotCoaddDiaSrc import ForcedPhotCoaddDiaSrcTask
+    config.forced.retarget(ForcedPhotCoaddDiaSrcTask)
+
+
+The other forced photometry algorithm performs forced photometry on the template images at the position of the diaObject catalog.  
+This is run on tracts and patches and has a different structure than the previous two scripts::
+
+  forcedPhotCoaddDia.py [repo] --rerun [rerun] --id tract=[tract] patch=[patch] filter=[filter]
+
+It has it's own driver script that can be run by::
+
+  forcedPhotCoaddDiaDriver.py [repo] --rerun [rerun] --id tract=[tract] patch=[patch] filter=[filter] --cores [cores]
 
 
 Setting time and PSF range when running coaddDriver
@@ -85,10 +125,12 @@ This package adds a selector to limit the input visits based on seeing and time 
 
 The FWHM values are specified in pixels.
 
+
 Using multiple tracts for templates when doing difference imaging
 -------------------------------------------------------------------
 By default the LSST difference imaging software will only get the template from a single tract.  If the overlap area between tracts is more than the size of a CCD then this is not an issue, however if the overlap area is small then some CCDs will not have complete template coverage.  'dia_pipe' includes an alternate template routine that will get all overlapping tracts for a given CCD.  In the region of overlap the template (and PSF) will be an average of the overlaping tracts.  To enable this algorithm with imageDifferenceDriver::
 
     from lsst.dia.pipe.getMultiTractTemplate import GetCoaddAsMultiTractTemplateTask
     config.imageDifference.getTemplate.retarget(GetCoaddAsMultiTractTemplateTask)
+
 

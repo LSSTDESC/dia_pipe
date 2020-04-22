@@ -1,3 +1,3 @@
 #!/usr/bin/env python
-from lsst.dia.pipe.forcedPhotDia import ForcedPhotCoaddDiaTask
+from lsst.dia.pipe.forcedPhotCoaddDia import ForcedPhotCoaddDiaTask
 ForcedPhotCoaddDiaTask.parseAndRun()

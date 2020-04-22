@@ -4,7 +4,7 @@ from lsst.pipe.drivers.utils import TractDataIdContainer
 from lsst.ctrl.pool.parallel import BatchPoolTask
 from lsst.ctrl.pool.pool import Pool
 
-from .forcedPhotDia import ForcedPhotCoaddDiaTask
+from .forcedPhotCoaddDia import ForcedPhotCoaddDiaTask
 
 
 class ForcedPhotCoaddDiaDriverConfig(Config):
