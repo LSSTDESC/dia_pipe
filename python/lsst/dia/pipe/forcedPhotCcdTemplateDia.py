@@ -113,9 +113,8 @@ class ForcedPhotCcdTemplateDiaTask(ForcedPhotCcdTask):
     def runDataRef(self, dataRef, psfCache=None):
         """!Measure a single exposure using forced detection for a reference catalog.
         @param[in]  dataRef   An lsst.daf.persistence.ButlerDataRef. It is passed to the
-                              references subtask to obtain the reference WCS, the getExposure()
-                              method (implemented by derived classes) to read the measurement
-                              image, and load the reference catalog.    Sources are
+                              references subtask to obtain the reference WCS, the image, 
+                              and load the reference catalog.    Sources are
                               generated with generateMeasCat() in the measurement subtask.  These
                               are passed to measurement's run method which fills the source
                               catalog with the forced measurement results.  The sources are then
@@ -125,7 +124,7 @@ class ForcedPhotCcdTemplateDiaTask(ForcedPhotCcdTask):
         @param[in]  psfCache  Size of PSF cache, or None. The size of the PSF cache can have
                               a significant effect upon the runtime for complicated PSF models.
         """
-        exposure = self.getExposure(dataRef)
+        exposure = dataRef.get('deepDiff_differenceExp')
         tractRefCat = self.getReferences(dataRef.getButler(), exposure, dataRef.dataId['filter'])
 
         if psfCache is not None:
