@@ -223,7 +223,9 @@ class AssociationDriverTask(BatchPoolTask):
 
         # We need the WCS for the patch, so we can use the first entry in the dataIdList
         dataRef = dataRefList[0]
+        tract = dataRef.dataId['tract']
         skyInfo = getSkyInfo(coaddName=self.config.coaddName, patchRef=dataRef)
+        skyMap = skyInfo.skyMap
         try:
             calexp = dataRef.get(f"{self.config.coaddName}Coadd_calexp")
         except Exception:
@@ -264,7 +266,11 @@ class AssociationDriverTask(BatchPoolTask):
                  for rec in diffIm.src],
             )
 
-            mask = (isInside) & (isGood)
+            isInnerTract = np.array(
+                [skyMap.findTract(srcWcs.pixelToSky(a.getCentroid())).getId()==tract for a in diffIm.src]
+            )
+
+            mask = (isInside) & (isGood) & (isInnerTract)
 
             src = diffIm.src[mask]
             if len(src) == 0:
