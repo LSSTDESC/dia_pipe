@@ -11,7 +11,7 @@ import lsst.sphgeom as sphgeom
 
 from lsst.meas.base.forcedPhotCcd import ForcedPhotCcdTask, ForcedPhotCcdConfig
 
-from .forcedPhotDia import DiaReferencesTask
+from .forcedPhotDia import DiaReferencesTask, DiaSrcReferencesTask
 
 __all__ = ("ForcedPhotCcdDiaConfig", "ForcedPhotCcdDiaTask")
 
@@ -233,7 +233,7 @@ class ForcedPhotCatalogDiaConfig(ForcedPhotCcdConfig):
 
     def setDefaults(self):
         ForcedPhotCcdTask.ConfigClass.setDefaults(self)
-        self.references.retarget(DiaReferencesTask)
+        self.references.retarget(DiaSrcReferencesTask)
         self.measurement.copyColumns = {"id": "dia_object_id", "coord_ra": "coord_ra",
                                         "coord_dec": "coord_dec"}
         self.measurement.plugins.names = ['base_SdssShape', 'base_DiaTransformedCentroid',
