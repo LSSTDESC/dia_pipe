@@ -304,7 +304,9 @@ class ForcedPhotCatalogDiaTask(ForcedPhotCcdTask):
         @param[in]  psfCache  Size of PSF cache, or None. The size of the PSF cache can have
                               a significant effect upon the runtime for complicated PSF models.
         """
-
+        if os.path.exists(self.config.outputDir) is False:
+            os.makedirs(self.config.outputDir)
+        
         exposure = dataRef.get('deepDiff_differenceExp')
         psfSize = exposure.getPsf().computeShape().getDeterminantRadius()
         refWcs = exposure.getWcs()
