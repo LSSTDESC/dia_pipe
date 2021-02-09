@@ -96,7 +96,6 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
         weightKey = tractsSchema.addField('weight', type=float, doc='Weight for each tract, should be 1')
         tractsCatalog = afwTable.ExposureCatalog(tractsSchema)
 
-
         skyMap = sensorRef.get(datasetType=self.config.coaddName + "Coadd_skyMap")
         expWcs = exposure.getWcs()
         expBoxD = geom.Box2D(exposure.getBBox())
@@ -126,8 +125,8 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
         coaddFilter = None
         nPatchesFound = 0
 
-        maskedImageList=[]
-        weightList=[]
+        maskedImageList = []
+        weightList = []
 
         for itract,tract in enumerate(tracts):
             tractInfo = tractPatchList[itract][0]
@@ -137,11 +136,11 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
             for skyPos in skyCorners:
                 coaddBBox.include(coaddWcs.skyToPixel(skyPos))
             coaddBBox = geom.Box2I(coaddBBox)
-                
+
             if itract == 0:
                 # Define final wcs and bounding box from the reference tract
                 finalWcs = coaddWcs
-                finalBBox = coaddBBox    
+                finalBBox = coaddBBox
 
             patchList = tractPatchList[itract][1]
             for patchInfo in patchList:
@@ -153,8 +152,8 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
                 patchInt = int(f"{patchInfo.getIndex()[0]}{patchInfo.getIndex()[1]}")
                 innerBBox = geom.Box2I(tractInfo._minimumBoundingBox(finalWcs))
 
-                if itract == 0:          
-                    # clip to image and tract boundaries  
+                if itract == 0:
+                    # clip to image and tract boundaries
                     patchSubBBox.clip(finalBBox)
                     patchSubBBox.clip(innerBBox)
                     if patchSubBBox.getArea() == 0:
@@ -194,7 +193,7 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
                     localBox = geom.Box2I()
                     for skyPos in skyCorners:
                         localBox.include(geom.Point2I(tractInfo.getWcs().skyToPixel(skyPos)))
-                    
+
                     # clip to patch bounding box
                     localBox.clip(patchSubBBox)
 
@@ -218,6 +217,12 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
                     xyTransform = afwGeom.makeWcsPairTransform(coaddPatch.getWcs(), finalWcs)
                     psfWarped = WarpedPsf(coaddPatch.getPsf(), xyTransform)
                     warped = self.warper.warpExposure(finalWcs, coaddPatch, maxBBox=finalBBox)
+
+                    # check if warpped image is viable
+                    if warped.getBBox().getArea() == 0:
+                        self.log.info("No ovlerap for warped patch %s. Skipping" % patchInfo)
+                        continue
+
                     warped.setPsf(psfWarped)
 
                     exp = afwImage.ExposureF(finalBBox, finalWcs)
@@ -236,7 +241,6 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
                     record.set(weightKey, 1.)
                     nPatchesFound += 1
 
-         
         if nPatchesFound == 0:
             raise RuntimeError("No patches found!")
 
@@ -251,13 +255,13 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
         statsCtrl.setNanSafe(True)
         statsCtrl.setWeighted(True)
         statsCtrl.setCalcErrorFromInputVariance(True)
-        
+
         coaddExposure = afwImage.ExposureF(finalBBox, finalWcs)
         coaddExposure.maskedImage.set(np.nan, afwImage.Mask.getPlaneBitMask("NO_DATA"), np.nan)
         xy0 = coaddExposure.getXY0()
-        coaddExposure.maskedImage = afwMath.statisticsStack(maskedImageList, 
-            statsFlags, statsCtrl, weightList, 0, maskMap)
-        coaddExposure.maskedImage.setXY0(xy0)   
+        coaddExposure.maskedImage = afwMath.statisticsStack(maskedImageList,
+                                                            statsFlags, statsCtrl, weightList, 0, maskMap)
+        coaddExposure.maskedImage.setXY0(xy0)
         coaddExposure.writeFits('test.fits')
         coaddPsf = CoaddPsf(tractsCatalog, finalWcs, self.config.coaddPsf.makeControl())
         if coaddPsf is None:
@@ -277,5 +281,3 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
         warpType = self.config.warpType
         suffix = "" if warpType == "direct" else warpType[0].upper() + warpType[1:]
         return self.config.coaddName + "Coadd" + suffix
-
-
