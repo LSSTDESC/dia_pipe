@@ -218,6 +218,12 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
                     xyTransform = afwGeom.makeWcsPairTransform(coaddPatch.getWcs(), finalWcs)
                     psfWarped = WarpedPsf(coaddPatch.getPsf(), xyTransform)
                     warped = self.warper.warpExposure(finalWcs, coaddPatch, maxBBox=finalBBox)
+
+                    # check if warpped image is viable
+                    if warped.getBBox().getArea() == 0:
+                        self.log.info("No ovlerap for warped patch %s. Skipping" % patchInfo)
+                        continue
+
                     warped.setPsf(psfWarped)
 
                     exp = afwImage.ExposureF(finalBBox, finalWcs)
