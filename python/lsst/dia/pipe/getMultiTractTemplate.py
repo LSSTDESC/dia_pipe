@@ -244,8 +244,6 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
         if nPatchesFound == 0:
             raise RuntimeError("No patches found!")
 
-        coaddPsf = CoaddPsf(tractsCatalog, coaddWcs, self.config.coaddPsf.makeControl())
-
         # Combine images from individual patches together
 
         # Do not mask any values
@@ -262,7 +260,7 @@ class GetCoaddAsMultiTractTemplateTask(pipeBase.Task):
         coaddExposure.maskedImage = afwMath.statisticsStack(maskedImageList,
                                                             statsFlags, statsCtrl, weightList, 0, maskMap)
         coaddExposure.maskedImage.setXY0(xy0)
-        coaddExposure.writeFits('test.fits')
+
         coaddPsf = CoaddPsf(tractsCatalog, finalWcs, self.config.coaddPsf.makeControl())
         if coaddPsf is None:
             raise RuntimeError("No coadd Psf found!")
